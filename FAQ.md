@@ -1,12 +1,9 @@
 # Kost FAQ
 
-This is a brand new tool and we anticipate there will be questions!
-If your question isn't answered here please reach out in [platform-capacity-chat](https://raintank-corp.slack.com/archives/C03PDLFK29K).
-
 ## Why Kost?
 
-We want to pivot from being reactive to proactive about cloud spend. 
-This starts by informing engineers as early as possible about how their changes will impact cloud spend. 
+We want to pivot from being reactive to proactive about cloud spend.
+This starts by informing engineers as early as possible about how their changes will impact cloud spend.
 Tooling exists today to estimate the cost of terraform changes, but little exists for kubernetes.
 `kost` is meant to fill that gap as the space matures.
 
@@ -19,18 +16,15 @@ The estimate provided is likely the _worst case_ scenario.
 As of this writing, we do _not_ account for the following:
 - Resource-based commitments (CUDs, Reserved Instances, etc)
 - Cost of spot instances
-- Daemonsets only calculate the cost of a single replica. The estimate does not account for the number of nodes the daemonset runs on
 - Deployments with Horizontal Pod Autoscaling rules will not account for the min and max replicas
-- Does not calculate the cost of *dev* clusters
 
-See our roadmap [issue](https://github.com/grafana/deployment_tools/issues/62095) to follow progress! 
+See our roadmap [issue](https://github.com/grafana/deployment_tools/issues/62095) to follow progress!
 
 ## Do I need to ask for approval
 
 *_NO_*! This is _not_ meant to act as an approval mechanism.
 We firmly believe our engineers will know whats best for the services they own and operate.
 The primary goal is to spread awareness of costs in an automated way.
-A secondary goal is to mitigate the need to reach out to @platform-capacity to understand how a change will impact costs.
 
 ## How do I think about these numbers?
 
