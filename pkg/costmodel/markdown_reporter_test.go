@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/costmodel/utils"
+	"github.com/grafana/kost/pkg/costmodel/utils"
 )
 
 func TestResourcesCost(t *testing.T) {

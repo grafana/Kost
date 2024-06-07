@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/costmodel"
+	"github.com/grafana/kost/pkg/costmodel"
 )
 
 func main() {

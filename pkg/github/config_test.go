@@ -6,7 +6,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/github"
+	"github.com/grafana/kost/pkg/github"
 )
 
 func TestConfigValidate(t *testing.T) {

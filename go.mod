@@ -1,4 +1,4 @@
-module github.com/grafana/deployment_tools/docker/k8s-cost-estimator
+module github.com/grafana/kost
 
 go 1.22.0
 

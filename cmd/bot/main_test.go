@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/git"
+	"github.com/grafana/kost/pkg/git"
 )
 
 func TestFindCluster(t *testing.T) {

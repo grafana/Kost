@@ -14,10 +14,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/costmodel"
+	"github.com/grafana/kost/pkg/costmodel"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/git"
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/github"
+	"github.com/grafana/kost/pkg/git"
+	"github.com/grafana/kost/pkg/github"
 )
 
 //go:embed comment.md

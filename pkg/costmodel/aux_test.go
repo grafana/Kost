@@ -3,8 +3,9 @@ package costmodel
 import (
 	"testing"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/costmodel/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/grafana/kost/pkg/costmodel/utils"
 )
 
 // This is for making it easier to assign resources for testing.

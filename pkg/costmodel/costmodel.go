@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/grafana/deployment_tools/docker/k8s-cost-estimator/pkg/costmodel/utils"
+	"github.com/grafana/kost/pkg/costmodel/utils"
 )
 
 type Period float64
