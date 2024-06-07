@@ -1,0 +1,110 @@
+{
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+        "annotations": {
+            "deployment.kubernetes.io/revision": "2"
+        },
+        "creationTimestamp": "2022-10-24T13:17:00Z",
+        "generation": 2,
+        "labels": {
+            "kustomize.toolkit.fluxcd.io/name": "kube-manifests-opencost",
+            "kustomize.toolkit.fluxcd.io/namespace": "opencost",
+            "tanka.dev/environment": "be79d2edd9abf276a674f10b071fedae86fd1e0ecbb57813"
+        },
+        "name": "prom-label-proxy",
+        "namespace": "opencost",
+        "resourceVersion": "5567881684",
+        "uid": "0d5a258d-e62c-4f15-b8ed-11e80ebb21c6"
+    },
+    "spec": {
+        "minReadySeconds": 10,
+        "progressDeadlineSeconds": 600,
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+            "matchLabels": {
+                "name": "prom-label-proxy"
+            }
+        },
+        "strategy": {
+            "rollingUpdate": {
+                "maxSurge": "25%",
+                "maxUnavailable": "25%"
+            },
+            "type": "RollingUpdate"
+        },
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "name": "prom-label-proxy"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "args": [
+                            "-insecure-listen-address=0.0.0.0:8080",
+                            "-label=cluster",
+                            "-label-value=prod-us-central-0",
+                            "-upstream=https://prometheus-ops-01-ops-us-east-0.grafana-ops.net/api/prom"
+                        ],
+                        "image": "quay.io/prometheuscommunity/prom-label-proxy:master@sha256:3d055b873827f95230d5babb9de48ad32b9a77e5e1a017eebe7eb898128194a9",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "prom-label-proxy",
+                        "ports": [
+                            {
+                                "containerPort": 8080,
+                                "name": "http-metrics",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {
+                            "limits": {
+                                "cpu": "4",
+                                "memory": "4000Mi"
+                            },
+                            "requests": {
+                                "cpu": "2",
+                                "memory": "2000Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "terminationGracePeriodSeconds": 30
+            }
+        }
+    },
+    "status": {
+        "availableReplicas": 1,
+        "conditions": [
+            {
+                "lastTransitionTime": "2022-10-24T13:17:00Z",
+                "lastUpdateTime": "2022-10-27T17:18:19Z",
+                "message": "ReplicaSet \"prom-label-proxy-7b54bcc9f4\" has successfully progressed.",
+                "reason": "NewReplicaSetAvailable",
+                "status": "True",
+                "type": "Progressing"
+            },
+            {
+                "lastTransitionTime": "2023-03-08T08:25:09Z",
+                "lastUpdateTime": "2023-03-08T08:25:09Z",
+                "message": "Deployment has minimum availability.",
+                "reason": "MinimumReplicasAvailable",
+                "status": "True",
+                "type": "Available"
+            }
+        ],
+        "observedGeneration": 2,
+        "readyReplicas": 1,
+        "replicas": 1,
+        "updatedReplicas": 1
+    }
+}
