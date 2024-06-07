@@ -1,0 +1,162 @@
+{
+    "apiVersion": "batch/v1",
+    "kind": "Job",
+    "metadata": {
+        "creationTimestamp": "2023-03-10T00:00:00Z",
+        "generation": 1,
+        "labels": {
+            "controller-uid": "b7428da1-6d7b-4b9d-8b51-bdd170958e22",
+            "job-name": "hosted-grafana-source-ips-update-27973440",
+            "name": "hosted-grafana-source-ips-update"
+        },
+        "name": "hosted-grafana-source-ips-update-27973440",
+        "namespace": "hosted-grafana",
+        "ownerReferences": [
+            {
+                "apiVersion": "batch/v1",
+                "blockOwnerDeletion": true,
+                "controller": true,
+                "kind": "CronJob",
+                "name": "hosted-grafana-source-ips-update",
+                "uid": "c4125095-716b-43dd-b112-0ba43ccb5b51"
+            }
+        ],
+        "resourceVersion": "5597051618",
+        "uid": "b7428da1-6d7b-4b9d-8b51-bdd170958e22"
+    },
+    "spec": {
+        "backoffLimit": 3,
+        "completionMode": "NonIndexed",
+        "parallelism": 1,
+        "selector": {
+            "matchLabels": {
+                "controller-uid": "b7428da1-6d7b-4b9d-8b51-bdd170958e22"
+            }
+        },
+        "suspend": false,
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "controller-uid": "b7428da1-6d7b-4b9d-8b51-bdd170958e22",
+                    "job-name": "hosted-grafana-source-ips-update-27973440",
+                    "name": "hosted-grafana-source-ips-update"
+                }
+            },
+            "spec": {
+                "activeDeadlineSeconds": 360,
+                "containers": [
+                    {
+                        "command": [
+                            "/usr/local/bin/node",
+                            "./bin/update-src-ips.js",
+                            "--dry-run=false",
+                            "--debug=true",
+                            "--cluster-domain=src-ips.gke-us-central1.hosted-grafana.grafana.net",
+                            "--static-only=true",
+                            "--static-ips=34.69.204.106",
+                            "--static-ips=107.178.208.235",
+                            "--static-ips=35.223.104.30",
+                            "--static-ips=34.122.201.10",
+                            "--static-ips=35.194.53.190",
+                            "--static-ips=34.70.10.78",
+                            "--static-ips=104.154.18.168",
+                            "--static-ips=35.192.170.84",
+                            "--static-ips=35.225.46.237",
+                            "--static-ips=35.238.91.227",
+                            "--static-ips=35.239.61.132",
+                            "--static-ips=104.154.148.31",
+                            "--static-ips=23.236.55.100",
+                            "--static-ips=34.71.21.236",
+                            "--static-ips=104.154.179.160",
+                            "--static-ips=35.202.43.115",
+                            "--static-ips=104.197.149.206",
+                            "--static-ips=35.222.253.67",
+                            "--static-ips=34.122.25.189",
+                            "--static-ips=35.184.23.28",
+                            "--static-ips=34.72.240.165",
+                            "--static-ips=34.70.19.238",
+                            "--static-ips=34.68.98.63",
+                            "--static-ips=35.188.111.61",
+                            "--static-ips=35.188.211.52",
+                            "--static-ips=34.134.222.119",
+                            "--static-ips=35.192.9.186",
+                            "--static-ips=34.72.94.67",
+                            "--static-ips=35.223.234.104",
+                            "--static-ips=34.71.146.82",
+                            "--static-ips=34.71.98.16",
+                            "--static-ips=34.134.236.18",
+                            "--static-ips=35.232.101.234",
+                            "--static-ips=34.69.227.129",
+                            "--static-ips=34.69.89.218",
+                            "--static-ips=34.121.249.58",
+                            "--static-ips=35.188.35.239",
+                            "--static-ips=35.224.49.153",
+                            "--static-ips=35.224.152.225",
+                            "--static-ips=35.193.153.9",
+                            "--static-ips=35.188.223.159",
+                            "--static-ips=34.121.8.98",
+                            "--static-ips=35.232.52.64",
+                            "--static-ips=104.197.203.224",
+                            "--static-ips=35.232.164.62",
+                            "--static-ips=34.132.169.54",
+                            "--static-ips=34.67.217.87",
+                            "--static-ips=34.133.189.12",
+                            "--static-ips=35.193.116.27",
+                            "--static-ips=35.239.142.182",
+                            "--static-ips=34.71.213.69",
+                            "--static-ips=34.68.102.192",
+                            "--static-ips=34.136.227.230",
+                            "--static-ips=35.224.213.187",
+                            "--static-ips=104.197.72.38",
+                            "--static-ips=35.225.14.197",
+                            "--static-ips=34.28.196.162",
+                            "--static-ips=34.66.50.58",
+                            "--static-ips=34.30.244.87",
+                            "--static-ips=34.66.84.48"
+                        ],
+                        "image": "us.gcr.io/hosted-grafana/hosted-grafana-api:0.1.293",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "source-ips-update",
+                        "resources": {
+                            "limits": {
+                                "memory": "400Mi"
+                            },
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "200Mi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "imagePullSecrets": [
+                    {
+                        "name": "gcr"
+                    }
+                ],
+                "restartPolicy": "OnFailure",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "hg-src-ips-update",
+                "serviceAccountName": "hg-src-ips-update",
+                "terminationGracePeriodSeconds": 30
+            }
+        }
+    },
+    "status": {
+        "completionTime": "2023-03-10T00:00:24Z",
+        "conditions": [
+            {
+                "lastProbeTime": "2023-03-10T00:00:24Z",
+                "lastTransitionTime": "2023-03-10T00:00:24Z",
+                "status": "True",
+                "type": "Complete"
+            }
+        ],
+        "startTime": "2023-03-10T00:00:00Z",
+        "succeeded": 1
+    }
+}

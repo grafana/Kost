@@ -1,0 +1,956 @@
+{
+    "apiVersion": "apps/v1",
+    "kind": "StatefulSet",
+    "metadata": {
+        "creationTimestamp": "2023-02-02T20:21:59Z",
+        "generation": 8,
+        "labels": {
+            "kustomize.toolkit.fluxcd.io/name": "kube-manifests-default",
+            "kustomize.toolkit.fluxcd.io/namespace": "default",
+            "tanka.dev/environment": "f60a723341ac3267b755d8579fbbbb3986537d99b6394549"
+        },
+        "name": "prometheus",
+        "namespace": "default",
+        "resourceVersion": "5591273458",
+        "uid": "1aecd498-7c0c-47d5-b1e7-2cf4daecdd19"
+    },
+    "spec": {
+        "podManagementPolicy": "Parallel",
+        "replicas": 2,
+        "revisionHistoryLimit": 10,
+        "selector": {
+            "matchLabels": {
+                "name": "prometheus"
+            }
+        },
+        "serviceName": "prometheus",
+        "template": {
+            "metadata": {
+                "annotations": {
+                    "prometheus.io.metamon": "true",
+                    "prometheus.io.path": "/prometheus/metrics"
+                },
+                "creationTimestamp": null,
+                "labels": {
+                    "ha": "true",
+                    "name": "prometheus"
+                }
+            },
+            "spec": {
+                "affinity": {
+                    "podAntiAffinity": {
+                        "requiredDuringSchedulingIgnoredDuringExecution": [
+                            {
+                                "labelSelector": {
+                                    "matchLabels": {
+                                        "name": "prometheus"
+                                    }
+                                },
+                                "topologyKey": "kubernetes.io/hostname"
+                            }
+                        ]
+                    }
+                },
+                "containers": [
+                    {
+                        "args": [
+                            "--config.file=/etc/prometheus/$(POD_NAME).yml",
+                            "--web.listen-address=:9090",
+                            "--web.external-url=https://admin-prod-us-central-0.grafana.net/prometheus/",
+                            "--web.enable-admin-api",
+                            "--web.enable-lifecycle",
+                            "--web.route-prefix=/prometheus/",
+                            "--storage.tsdb.path=/prometheus/data",
+                            "--storage.tsdb.wal-compression",
+                            "--enable-feature=promql-at-modifier,exemplar-storage",
+                            "--query.max-concurrency=40"
+                        ],
+                        "env": [
+                            {
+                                "name": "POD_NAME",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "metadata.name"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "GOGC",
+                                "value": "40"
+                            },
+                            {
+                                "name": "GOMAXPROCS",
+                                "value": "75"
+                            }
+                        ],
+                        "image": "prom/prometheus:v2.42.0",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "prometheus",
+                        "ports": [
+                            {
+                                "containerPort": 9090,
+                                "name": "http-metrics",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "readinessProbe": {
+                            "failureThreshold": 3,
+                            "httpGet": {
+                                "path": "/prometheus/-/ready",
+                                "port": 9090,
+                                "scheme": "HTTP"
+                            },
+                            "initialDelaySeconds": 15,
+                            "periodSeconds": 10,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "resources": {
+                            "limits": {
+                                "memory": "360Gi"
+                            },
+                            "requests": {
+                                "cpu": "45",
+                                "memory": "320Gi"
+                            }
+                        },
+                        "startupProbe": {
+                            "failureThreshold": 480,
+                            "httpGet": {
+                                "path": "/prometheus/-/ready",
+                                "port": 9090,
+                                "scheme": "HTTP"
+                            },
+                            "initialDelaySeconds": 15,
+                            "periodSeconds": 30,
+                            "successThreshold": 1,
+                            "timeoutSeconds": 1
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/prometheus",
+                                "name": "prometheus-data"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus",
+                                "name": "prometheus-config"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/unmanaged_resources_exporter",
+                                "name": "prometheus-unmanaged-resources-exporter-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/tempo",
+                                "name": "prometheus-tempo-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/synthetic_monitoring",
+                                "name": "prometheus-synthetic-monitoring-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/stackdriver_bigtable",
+                                "name": "prometheus-stackdriver-bigtable-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/stack_state_service",
+                                "name": "prometheus-stack-state-service-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_4",
+                                "name": "prometheus-slo-rules-4-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_3",
+                                "name": "prometheus-slo-rules-3-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_2",
+                                "name": "prometheus-slo-rules-2-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_1",
+                                "name": "prometheus-slo-rules-1-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_0",
+                                "name": "prometheus-slo-rules-0-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/rudderstack",
+                                "name": "prometheus-rudderstack-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/promtail",
+                                "name": "prometheus-promtail-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/phlare",
+                                "name": "prometheus-phlare-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/otlp_gateway",
+                                "name": "prometheus-otlp-gateway-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/node_exporter",
+                                "name": "prometheus-node-exporter-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/memcached",
+                                "name": "prometheus-memcached-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/machine_learning",
+                                "name": "prometheus-machine-learning-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/loki",
+                                "name": "prometheus-loki-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/kubernetes",
+                                "name": "prometheus-kubernetes-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/keda",
+                                "name": "prometheus-keda-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/jaeger",
+                                "name": "prometheus-jaeger-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/insight_logs",
+                                "name": "prometheus-insight-logs-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/infra",
+                                "name": "prometheus-infra-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/influx",
+                                "name": "prometheus-influx-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/incident",
+                                "name": "prometheus-incident-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/hosted_grafana",
+                                "name": "prometheus-hosted-grafana-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/graphite",
+                                "name": "prometheus-graphite-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/grafana_com",
+                                "name": "prometheus-grafana-com-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/grafana",
+                                "name": "prometheus-grafana-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/freetier",
+                                "name": "prometheus-freetier-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/flux_system",
+                                "name": "prometheus-flux-system-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/flagger",
+                                "name": "prometheus-flagger-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/faro",
+                                "name": "prometheus-faro-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/external_secrets",
+                                "name": "prometheus-external-secrets-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/etcd",
+                                "name": "prometheus-etcd-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/datadog",
+                                "name": "prometheus-datadog-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/cortex",
+                                "name": "prometheus-cortex-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/consul",
+                                "name": "prometheus-consul-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/cloud_onboarding_mixin",
+                                "name": "prometheus-cloud-onboarding-mixin-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/chatops_proxy",
+                                "name": "prometheus-chatops-proxy-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/cert_manager",
+                                "name": "prometheus-cert-manager-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/base",
+                                "name": "prometheus-base-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/auth_api",
+                                "name": "prometheus-auth-api-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/amixr",
+                                "name": "prometheus-amixr-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/aggregations",
+                                "name": "prometheus-aggregations-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/agent_management",
+                                "name": "prometheus-agent-management-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/agent",
+                                "name": "prometheus-agent-mixin"
+                            }
+                        ]
+                    },
+                    {
+                        "args": [
+                            "-v",
+                            "-t",
+                            "-p=/etc/prometheus",
+                            "curl",
+                            "-X",
+                            "POST",
+                            "--fail",
+                            "-o",
+                            "-",
+                            "-sS",
+                            "http://localhost:9090/prometheus/-/reload"
+                        ],
+                        "env": [
+                            {
+                                "name": "POD_NAME",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "metadata.name"
+                                    }
+                                }
+                            }
+                        ],
+                        "image": "weaveworks/watch:master-5fc29a9",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "watch",
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/etc/prometheus",
+                                "name": "prometheus-config"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/unmanaged_resources_exporter",
+                                "name": "prometheus-unmanaged-resources-exporter-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/tempo",
+                                "name": "prometheus-tempo-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/synthetic_monitoring",
+                                "name": "prometheus-synthetic-monitoring-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/stackdriver_bigtable",
+                                "name": "prometheus-stackdriver-bigtable-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/stack_state_service",
+                                "name": "prometheus-stack-state-service-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_4",
+                                "name": "prometheus-slo-rules-4-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_3",
+                                "name": "prometheus-slo-rules-3-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_2",
+                                "name": "prometheus-slo-rules-2-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_1",
+                                "name": "prometheus-slo-rules-1-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/slo_rules_0",
+                                "name": "prometheus-slo-rules-0-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/rudderstack",
+                                "name": "prometheus-rudderstack-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/promtail",
+                                "name": "prometheus-promtail-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/phlare",
+                                "name": "prometheus-phlare-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/otlp_gateway",
+                                "name": "prometheus-otlp-gateway-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/node_exporter",
+                                "name": "prometheus-node-exporter-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/memcached",
+                                "name": "prometheus-memcached-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/machine_learning",
+                                "name": "prometheus-machine-learning-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/loki",
+                                "name": "prometheus-loki-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/kubernetes",
+                                "name": "prometheus-kubernetes-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/keda",
+                                "name": "prometheus-keda-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/jaeger",
+                                "name": "prometheus-jaeger-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/insight_logs",
+                                "name": "prometheus-insight-logs-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/infra",
+                                "name": "prometheus-infra-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/influx",
+                                "name": "prometheus-influx-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/incident",
+                                "name": "prometheus-incident-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/hosted_grafana",
+                                "name": "prometheus-hosted-grafana-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/graphite",
+                                "name": "prometheus-graphite-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/grafana_com",
+                                "name": "prometheus-grafana-com-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/grafana",
+                                "name": "prometheus-grafana-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/freetier",
+                                "name": "prometheus-freetier-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/flux_system",
+                                "name": "prometheus-flux-system-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/flagger",
+                                "name": "prometheus-flagger-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/faro",
+                                "name": "prometheus-faro-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/external_secrets",
+                                "name": "prometheus-external-secrets-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/etcd",
+                                "name": "prometheus-etcd-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/datadog",
+                                "name": "prometheus-datadog-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/cortex",
+                                "name": "prometheus-cortex-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/consul",
+                                "name": "prometheus-consul-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/cloud_onboarding_mixin",
+                                "name": "prometheus-cloud-onboarding-mixin-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/chatops_proxy",
+                                "name": "prometheus-chatops-proxy-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/cert_manager",
+                                "name": "prometheus-cert-manager-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/base",
+                                "name": "prometheus-base-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/auth_api",
+                                "name": "prometheus-auth-api-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/amixr",
+                                "name": "prometheus-amixr-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/aggregations",
+                                "name": "prometheus-aggregations-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/agent_management",
+                                "name": "prometheus-agent-management-mixin"
+                            },
+                            {
+                                "mountPath": "/etc/prometheus/mixins/agent",
+                                "name": "prometheus-agent-mixin"
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {
+                    "fsGroup": 2000,
+                    "runAsNonRoot": true,
+                    "runAsUser": 1000
+                },
+                "serviceAccount": "prometheus",
+                "serviceAccountName": "prometheus",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoSchedule",
+                        "key": "o11y",
+                        "operator": "Equal",
+                        "value": "true"
+                    }
+                ],
+                "volumes": [
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-config"
+                        },
+                        "name": "prometheus-config"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-unmanaged-resources-exporter-mixin"
+                        },
+                        "name": "prometheus-unmanaged-resources-exporter-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-tempo-mixin"
+                        },
+                        "name": "prometheus-tempo-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-synthetic-monitoring-mixin"
+                        },
+                        "name": "prometheus-synthetic-monitoring-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-stackdriver-bigtable-mixin"
+                        },
+                        "name": "prometheus-stackdriver-bigtable-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-stack-state-service-mixin"
+                        },
+                        "name": "prometheus-stack-state-service-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-slo-rules-4-mixin"
+                        },
+                        "name": "prometheus-slo-rules-4-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-slo-rules-3-mixin"
+                        },
+                        "name": "prometheus-slo-rules-3-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-slo-rules-2-mixin"
+                        },
+                        "name": "prometheus-slo-rules-2-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-slo-rules-1-mixin"
+                        },
+                        "name": "prometheus-slo-rules-1-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-slo-rules-0-mixin"
+                        },
+                        "name": "prometheus-slo-rules-0-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-rudderstack-mixin"
+                        },
+                        "name": "prometheus-rudderstack-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-promtail-mixin"
+                        },
+                        "name": "prometheus-promtail-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-phlare-mixin"
+                        },
+                        "name": "prometheus-phlare-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-otlp-gateway-mixin"
+                        },
+                        "name": "prometheus-otlp-gateway-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-node-exporter-mixin"
+                        },
+                        "name": "prometheus-node-exporter-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-memcached-mixin"
+                        },
+                        "name": "prometheus-memcached-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-machine-learning-mixin"
+                        },
+                        "name": "prometheus-machine-learning-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-loki-mixin"
+                        },
+                        "name": "prometheus-loki-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-kubernetes-mixin"
+                        },
+                        "name": "prometheus-kubernetes-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-keda-mixin"
+                        },
+                        "name": "prometheus-keda-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-jaeger-mixin"
+                        },
+                        "name": "prometheus-jaeger-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-insight-logs-mixin"
+                        },
+                        "name": "prometheus-insight-logs-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-infra-mixin"
+                        },
+                        "name": "prometheus-infra-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-influx-mixin"
+                        },
+                        "name": "prometheus-influx-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-incident-mixin"
+                        },
+                        "name": "prometheus-incident-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-hosted-grafana-mixin"
+                        },
+                        "name": "prometheus-hosted-grafana-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-graphite-mixin"
+                        },
+                        "name": "prometheus-graphite-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-grafana-com-mixin"
+                        },
+                        "name": "prometheus-grafana-com-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-grafana-mixin"
+                        },
+                        "name": "prometheus-grafana-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-freetier-mixin"
+                        },
+                        "name": "prometheus-freetier-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-flux-system-mixin"
+                        },
+                        "name": "prometheus-flux-system-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-flagger-mixin"
+                        },
+                        "name": "prometheus-flagger-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-faro-mixin"
+                        },
+                        "name": "prometheus-faro-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-external-secrets-mixin"
+                        },
+                        "name": "prometheus-external-secrets-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-etcd-mixin"
+                        },
+                        "name": "prometheus-etcd-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-datadog-mixin"
+                        },
+                        "name": "prometheus-datadog-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-cortex-mixin"
+                        },
+                        "name": "prometheus-cortex-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-consul-mixin"
+                        },
+                        "name": "prometheus-consul-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-cloud-onboarding-mixin-mixin"
+                        },
+                        "name": "prometheus-cloud-onboarding-mixin-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-chatops-proxy-mixin"
+                        },
+                        "name": "prometheus-chatops-proxy-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-cert-manager-mixin"
+                        },
+                        "name": "prometheus-cert-manager-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-base-mixin"
+                        },
+                        "name": "prometheus-base-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-auth-api-mixin"
+                        },
+                        "name": "prometheus-auth-api-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-amixr-mixin"
+                        },
+                        "name": "prometheus-amixr-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-aggregations-mixin"
+                        },
+                        "name": "prometheus-aggregations-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-agent-management-mixin"
+                        },
+                        "name": "prometheus-agent-management-mixin"
+                    },
+                    {
+                        "configMap": {
+                            "defaultMode": 420,
+                            "name": "prometheus-agent-mixin"
+                        },
+                        "name": "prometheus-agent-mixin"
+                    }
+                ]
+            }
+        },
+        "updateStrategy": {
+            "type": "RollingUpdate"
+        },
+        "volumeClaimTemplates": [
+            {
+                "apiVersion": "v1",
+                "kind": "PersistentVolumeClaim",
+                "metadata": {
+                    "creationTimestamp": null,
+                    "name": "prometheus-data"
+                },
+                "spec": {
+                    "accessModes": [
+                        "ReadWriteOnce"
+                    ],
+                    "resources": {
+                        "requests": {
+                            "storage": "7500Gi"
+                        }
+                    },
+                    "volumeMode": "Filesystem"
+                },
+                "status": {
+                    "phase": "Pending"
+                }
+            }
+        ]
+    },
+    "status": {
+        "availableReplicas": 2,
+        "collisionCount": 0,
+        "currentReplicas": 2,
+        "currentRevision": "prometheus-56ddbd6777",
+        "observedGeneration": 8,
+        "readyReplicas": 2,
+        "replicas": 2,
+        "updateRevision": "prometheus-56ddbd6777",
+        "updatedReplicas": 2
+    }
+}

@@ -1,0 +1,133 @@
+{
+    "apiVersion": "apps/v1",
+    "kind": "DaemonSet",
+    "metadata": {
+        "annotations": {
+            "deprecated.daemonset.template.generation": "13"
+        },
+        "creationTimestamp": "2021-11-05T14:04:33Z",
+        "generation": 13,
+        "labels": {
+            "kustomize.toolkit.fluxcd.io/name": "kube-manifests-conntrack-exporter",
+            "kustomize.toolkit.fluxcd.io/namespace": "conntrack-exporter",
+            "tanka.dev/environment": "13a04e52f423c084c804cb8517eac7af19003f2c5979835e"
+        },
+        "name": "conntrack-exporter",
+        "namespace": "conntrack-exporter",
+        "resourceVersion": "5607071126",
+        "uid": "2ffbac6a-b432-4487-9820-0106db3e4c83"
+    },
+    "spec": {
+        "minReadySeconds": 10,
+        "revisionHistoryLimit": 10,
+        "selector": {
+            "matchLabels": {
+                "name": "conntrack-exporter"
+            }
+        },
+        "template": {
+            "metadata": {
+                "annotations": {
+                    "prometheus.io.scrape": "false"
+                },
+                "creationTimestamp": null,
+                "labels": {
+                    "name": "conntrack-exporter"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "args": [
+                            "-kubelet-pods-endpoint=https://$(NODE_IP):10250/pods",
+                            "-listen=$(POD_IP):9274"
+                        ],
+                        "env": [
+                            {
+                                "name": "NODE_IP",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "status.hostIP"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "POD_IP",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "status.podIP"
+                                    }
+                                }
+                            }
+                        ],
+                        "image": "us.gcr.io/kubernetes-dev/conntrack-exporter:2022-10-17-v174750-136d81afb",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "conntrack-exporter",
+                        "ports": [
+                            {
+                                "containerPort": 9274,
+                                "hostPort": 9274,
+                                "name": "http-metrics",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {
+                            "requests": {
+                                "cpu": "50m",
+                                "memory": "50Mi"
+                            }
+                        },
+                        "securityContext": {
+                            "capabilities": {
+                                "add": [
+                                    "NET_ADMIN"
+                                ]
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File"
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "hostNetwork": true,
+                "imagePullSecrets": [
+                    {
+                        "name": "gcr"
+                    }
+                ],
+                "priorityClassName": "high",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "conntrack-exporter",
+                "serviceAccountName": "conntrack-exporter",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoSchedule",
+                        "operator": "Exists"
+                    }
+                ]
+            }
+        },
+        "updateStrategy": {
+            "rollingUpdate": {
+                "maxSurge": 0,
+                "maxUnavailable": 1
+            },
+            "type": "RollingUpdate"
+        }
+    },
+    "status": {
+        "currentNumberScheduled": 1019,
+        "desiredNumberScheduled": 1019,
+        "numberAvailable": 1018,
+        "numberMisscheduled": 0,
+        "numberReady": 1018,
+        "numberUnavailable": 1,
+        "observedGeneration": 13,
+        "updatedNumberScheduled": 1019
+    }
+}

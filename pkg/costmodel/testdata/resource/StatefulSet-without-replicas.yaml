@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    name: alertmanager
+    tanka.dev/environment: 8d3cbfb926736c557b79412af9597422327058492909f6a0
+  name: alertmanager
+  namespace: alertmanager
+spec:
+  selector:
+    matchLabels:
+      name: alertmanager
+  serviceName: alertmanager
+  template:
+    metadata:
+      labels:
+        gossip_ring_member: "true"
+        insights: "true"
+        name: alertmanager
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                name: alertmanager
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - args:
+        - -admin.client.backend=
+        - -alertmanager-storage.gcs.bucket-name=dev-us-central1-cortex-alertmanager
+        - -alertmanager.configs.fallback=/configs/alertmanager_fallback_config.yaml
+        - -alertmanager.max-config-size-bytes=102400
+        - -alertmanager.max-template-size-bytes=51200
+        - -alertmanager.max-templates-count=10
+        - -alertmanager.receivers-firewall-block-private-addresses=true
+        - -alertmanager.sharding-ring.replication-factor=3
+        - -alertmanager.sharding-ring.store=memberlist
+        - -alertmanager.storage.path=/data
+        - -alertmanager.web.external-url=https://alertmanager-dev-us-central1.grafana-dev.net/alertmanager
+        - -auth.type=trust
+        - -common.storage.backend=gcs
+        - -instrumentation.enabled=false
+        - -log.level=debug
+        - -memberlist.bind-port=7946
+        - -memberlist.cluster-label=dev-us-central-0.alertmanager
+        - -memberlist.join=dns+gossip-ring.alertmanager.svc.cluster.local:7946
+        - -runtime-config.file=/etc/cortex/overrides.yaml
+        - -server.grpc.keepalive.min-time-between-pings=10s
+        - -server.grpc.keepalive.ping-without-stream-allowed=true
+        - -server.http-listen-port=80
+        - -target=alertmanager
+        - -usage-stats.installation-mode=jsonnet
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        image: grafana/metrics-enterprise:r233-c2dd8abf
+        imagePullPolicy: IfNotPresent
+        name: alertmanager
+        ports:
+        - containerPort: 80
+          name: http-metrics
+        - containerPort: 9095
+          name: grpc
+        - containerPort: 7946
+          name: gossip-ring
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 80
+          initialDelaySeconds: 15
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 15Gi
+          requests:
+            cpu: 200m
+            memory: 1Gi
+        volumeMounts:
+        - mountPath: /data
+          name: alertmanager-data
+        - mountPath: /configs
+          name: alertmanager-fallback-config
+        - mountPath: /etc/cortex
+          name: overrides
+      securityContext:
+        runAsUser: 0
+      terminationGracePeriodSeconds: 900
+      volumes:
+      - configMap:
+          name: overrides
+        name: overrides
+      - configMap:
+          name: alertmanager-fallback-config
+        name: alertmanager-fallback-config
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: alertmanager-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 100Gi
