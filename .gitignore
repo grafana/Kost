@@ -23,6 +23,6 @@
 
 # Go workspace file
 go.work
-k8s-cost-estimator
+kost
 
 # End of https://www.toptal.com/developers/gitignore/api/go
