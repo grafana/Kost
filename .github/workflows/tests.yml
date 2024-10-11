@@ -1,0 +1,29 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-goversion
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.56
+
+      - name: Test
+        run: go test -v ./...
