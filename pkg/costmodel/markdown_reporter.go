@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"text/template"
-
-	"golang.org/x/text/language"
-	"golang.org/x/text/message"
 )
 
 // resourcesCost contains the detailed cost for cluster resources.
@@ -108,9 +105,6 @@ func (d templateData) OldTotal() float64 {
 
 // CommentPrefix is used to identify and hide old messages on GitHub.
 const CommentPrefix = "<!-- kost -->"
-
-// printer is a localized printer.
-var printer = message.NewPrinter(language.English)
 
 //go:embed comment.tmpl.md
 var commentTemplate string
