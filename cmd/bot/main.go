@@ -21,6 +21,7 @@ import (
 )
 
 //go:embed comment.md
+//nolint:unused
 var commentTemplate string
 
 var (
