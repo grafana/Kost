@@ -1,4 +1,4 @@
-# This action extracts the go version from Dockerfile and uses this version setup go
+# This action extracts the go version from the Dockerfile and uses the value for the setup-go action used in later workflows
 name: setup-goversion
 description: Extracts the go version from Dockerfile and uses this version setup go
 runs:

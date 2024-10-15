@@ -22,7 +22,7 @@ import (
 
 //go:embed comment.md
 //nolint:unused
-var commentTemplate string //
+var commentTemplate string
 
 var (
 	// ErrNoClustersFound is returned when no clusters are found in the changed files
