@@ -19,7 +19,7 @@ build-image:
 	docker build --build-arg GO_LDFLAGS="$(GO_LDFLAGS)" -t $(IMAGE_PREFIX)/$(IMAGE_NAME) -t $(IMAGE_NAME_VERSION) .
 
 build-binary:
-	CGO_ENABLED=0 go build -v -ldflags "$(GO_LDFLAGS)" -o kost ./cmd/exporter
+	CGO_ENABLED=0 go build -v -ldflags "$(GO_LDFLAGS)" -o kost ./cmd/bot
 
 build: build-binary build-image
 
