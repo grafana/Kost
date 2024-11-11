@@ -13,13 +13,15 @@ require (
 	github.com/prometheus/common v0.53.0
 	github.com/shurcooL/githubv4 v0.0.0-20230305132112-efb623903184
 	golang.org/x/oauth2 v0.20.0
-	golang.org/x/text v0.15.0
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
 )
 
-require github.com/google/go-github/v62 v62.0.0 // indirect
+require (
+	github.com/google/go-github/v62 v62.0.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
+)
 
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8 // indirect
@@ -41,7 +43,7 @@ require (
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.9.0
 	golang.org/x/sys v0.18.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
