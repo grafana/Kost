@@ -4,7 +4,6 @@ metadata:
   name: kost
   title: kost
   annotations:
-    backstage.io/techdocs-ref: dir:.
     github.com/project-slug: grafana/kost
   links:
     - title: Slack Channel
