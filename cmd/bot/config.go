@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
+	"os"
 
 	"github.com/kelseyhightower/envconfig"
 
@@ -29,9 +31,10 @@ type config struct {
 
 	GitHub github.Config
 
-	IsCI  bool   `envconfig:"CI"`
-	PR    int    `envconfig:"DRONE_PULL_REQUEST" required:"true"`
-	Event string `envconfig:"DRONE_BUILD_EVENT"`
+	IsCI     bool   `envconfig:"CI"`
+	PR       int    `envconfig:"DRONE_PULL_REQUEST" required:"true"`
+	Event    string `envconfig:"DRONE_BUILD_EVENT"`
+	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
 const pullRequestEvent = "pull_request"
@@ -60,6 +63,12 @@ func (c config) validate() error {
 		return fmt.Errorf("github configuration: %w", err)
 	}
 
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(c.LogLevel)); err != nil {
+		return fmt.Errorf("parsing log level: %w", err)
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	slog.SetDefault(logger)
 	// TODO check repo exists
 
 	return nil

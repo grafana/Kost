@@ -73,14 +73,17 @@ func realMain(ctx context.Context) error {
 
 	repo := git.NewRepository(cfg.Manifests.RepoPath)
 
-	oldCommit := "master"
-	newCommit, err := repo.GetCurrentCommit(ctx)
+	oldCommit, err := repo.GetCommit(ctx, "HEAD^")
 	if err != nil {
-		return fmt.Errorf("getting current commit: %w", err)
+		return fmt.Errorf("getting commit: %w", err)
 	}
 
-	rev := oldCommit + "..." + newCommit
-	cf, err := repo.ChangedFiles(ctx, rev)
+	newCommit, err := repo.GetCommit(ctx, "HEAD")
+	if err != nil {
+		return fmt.Errorf("getting commit: %w", err)
+	}
+
+	cf, err := repo.ChangedFiles(ctx, oldCommit, newCommit)
 	if err != nil {
 		return err
 	}

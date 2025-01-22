@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -29,14 +30,18 @@ func (r Repository) git(ctx context.Context, args ...string) ([]byte, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
+		var ee *exec.ExitError
+		if errors.As(err, &ee) {
+			return nil, fmt.Errorf("running %v: %w\n%s", cmd, ee, ee.Stderr)
+		}
 		return nil, fmt.Errorf("running %v: %w", cmd, err)
 	}
 
 	return out, nil
 }
 
-func (r Repository) GetCurrentCommit(ctx context.Context) (string, error) {
-	head, err := r.git(ctx, "rev-parse", "HEAD")
+func (r Repository) GetCommit(ctx context.Context, ref string) (string, error) {
+	head, err := r.git(ctx, "rev-parse", ref)
 	if err != nil {
 		return "", err
 	}
@@ -44,12 +49,12 @@ func (r Repository) GetCurrentCommit(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(head)), nil
 }
 
-func (r Repository) ChangedFiles(ctx context.Context, rev string) (ChangedFiles, error) {
+func (r Repository) ChangedFiles(ctx context.Context, oldCommit string, newCommit string) (ChangedFiles, error) {
 	cf := ChangedFiles{
 		Renamed: make(map[string]string),
 	}
 
-	out, err := r.git(ctx, "diff", "--name-status", rev)
+	out, err := r.git(ctx, "diff", "--name-status", oldCommit, newCommit)
 	if err != nil {
 		return cf, err
 	}
