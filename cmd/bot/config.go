@@ -32,8 +32,8 @@ type config struct {
 	GitHub github.Config
 
 	IsCI     bool   `envconfig:"CI"`
-	PR       int    `envconfig:"DRONE_PULL_REQUEST" required:"true"`
-	Event    string `envconfig:"DRONE_BUILD_EVENT"`
+	PR       int    `envconfig:"GITHUB_PULL_REQUEST" required:"true"`
+	Event    string `envconfig:"GITHUB_EVENT_NAME"`
 	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
@@ -56,7 +56,7 @@ func (c config) validate() error {
 	}
 
 	if c.PR == 0 || c.Event != pullRequestEvent {
-		return errors.New("expecting DRONE_PULL_REQUEST and DRONE_BUILD_EVENT to be set")
+		return errors.New("expecting GITHUB_PULL_REQUEST and GITHUB_EVENT_NAME to be set")
 	}
 
 	if err := c.GitHub.Validate(); err != nil {

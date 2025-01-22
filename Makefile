@@ -7,6 +7,7 @@ IMAGE_PREFIX=grafana
 IMAGE_NAME=kost
 IMAGE_NAME_LATEST=${IMAGE_PREFIX}/${IMAGE_NAME}:latest
 IMAGE_NAME_VERSION=$(IMAGE_PREFIX)/$(IMAGE_NAME):$(VERSION)
+DIVE_HIGHEST_USER_WASTED_PERCENT := 0.15
 
 PROM_VERSION_PKG ?= github.com/prometheus/common/version
 BUILD_USER   ?= $(shell whoami)@$(shell hostname)

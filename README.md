@@ -15,11 +15,11 @@ Specifically, the following assumptions need to be met:
 - K8s resources defined in a standalone repository
   - We use [jsonnet](https://jsonnet.org/) to define resources + [tanka](https://tanka.dev/) to generate the k8s manifest files and commit them to a `kube-manifest` repo + [flux](https://fluxcd.io/) to deploy them to clusters
 - Mimir to store [opencost](https://github.com/opencost/opencost) + [cloudcost-exporter](https://github.com/grafana/cloudcost-exporter) metrics for cost data
-- Drone(soon to be GitHub Actions) to detect changes and run the cost report
+- GitHub Actions to detect changes and run the cost report
 
 While these are what we use internally and require, in theory the bot should work so long as you have:
 1. Two manifest files that you can compare changes
-2. Prometheus complient backend with cost metrics
+2. Prometheus compliant backend with cost metrics
 3. A CI system to run the bot when changes happen
 
 
@@ -45,7 +45,7 @@ There are two entrypoints that you can run:
 - bot
 
 Estimator is a simple cli that accepts two manifest files and a set of clusters to generate the cost estimator for.
-Bot is what is ran in Drone today and requires the `kube-manifest` repository to be available locally.
+Bot is what is ran in GitHub Actions today and requires the `kube-manifest` repository to be available locally.
 
 ## Estimator
 
@@ -76,8 +76,8 @@ Set the following environment variables:
 - `KUBE_MANIFESTS_PATH`: path to `grafana/kube-manifests`
 - `HTTP_CONFIG_FILE`: path to configuration created in [Prereqs](#prerequisites)
 - `PROMETHEUS_ADDRESS`: mimir endpoint
-- `DRONE_PULL_REQUEST`: GitHub PR to create comment on
-- `DRONE_BUILD_EVENT `: set to `pull_request`
+- `GITHUB_PULL_REQUEST`: GitHub PR to create comment on
+- `GITHUB_EVENT_NAME`: set to `pull_request`
 - `GITHUB_TOKEN`: set to a token that is able to comment on PRs
 - `CI`: set to `true`
 
