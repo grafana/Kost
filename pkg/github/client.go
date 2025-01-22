@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -32,6 +33,7 @@ func NewClient(ctx context.Context, cfg Config) (Client, error) {
 	var token = cfg.Token
 
 	if cfg.AppID > 0 {
+		slog.Info("Using GitHub app authentication")
 		t, err := ghinstallation.NewAppsTransport(
 			httpcache.NewMemoryCacheTransport(),
 			cfg.AppID,
@@ -52,6 +54,8 @@ func NewClient(ctx context.Context, cfg Config) (Client, error) {
 		}
 
 		token = tok.GetToken()
+	} else {
+		slog.Info("Using GitHub token authentication")
 	}
 
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
