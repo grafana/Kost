@@ -6,7 +6,7 @@ project_name: kost
 builds:
   - id: kost
     binary: kost
-    main: ./cmd/bot/main.go
+    main: ./cmd/bot
     env:
       - CGO_ENABLED=0
     goos:
@@ -16,7 +16,7 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats: ['tar.gz']
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
