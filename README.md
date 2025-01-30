@@ -14,7 +14,7 @@ Kost is a tool built at Grafana Labs to estimate the cost of workloads running i
 Specifically, the following assumptions need to be met:
 - K8s resources defined in a standalone repository
   - We use [jsonnet](https://jsonnet.org/) to define resources + [tanka](https://tanka.dev/) to generate the k8s manifest files and commit them to a `kube-manifest` repo + [flux](https://fluxcd.io/) to deploy them to clusters
-- Mimir to store [opencost](https://github.com/opencost/opencost) + [cloudcost-exporter](https://github.com/grafana/cloudcost-exporter) metrics for cost data
+- Mimir to store [cloudcost-exporter](https://github.com/grafana/cloudcost-exporter) metrics for cost data
 - GitHub Actions to detect changes and run the cost report
 
 While these are what we use internally and require, in theory the bot should work so long as you have:
@@ -25,11 +25,10 @@ While these are what we use internally and require, in theory the bot should wor
 
 ## Prerequisites for local development
 
-- HTTP access to a prometheus server that has OpenCost metrics available
-- Clone [grafana/kube-manifests](github.com/grafana/kube-manifests)
-- Get a token for Mimir with Viewer privileges
-   - dev: https://grafana-dev.com/orgs/raintank/api-keys
-   - ops: https://grafana-ops.com/orgs/raintank/api-keys
+- HTTP access to a prometheus server that has [cloudcost-exporter](https://github.com/grafana/cloudcost-exporter) metrics available
+- A local copy of the repository that stores kube-manifest files
+  - See [flux](https://fluxcd.io/flux/guides/repository-structure/) docs a similar structure to what Grafana Labs uses
+- If you have a Mimir instance running on Grafana Cloud, create an [access policy token](https://grafana.com/docs/grafana-cloud/account-management/authentication-and-permissions/access-policies/) with `metrics:read` permissions
 - Create a yaml file with basic auth creds to use. Replace password with the token you created earlier.
 
 ```yaml
@@ -75,7 +74,7 @@ Set the following environment variables:
 
 - `KUBE_MANIFESTS_PATH`: path to `grafana/kube-manifests`
 - `HTTP_CONFIG_FILE`: path to configuration created in [Prereqs](#prerequisites)
-- `PROMETHEUS_ADDRESS`: mimir endpoint
+- `PROMETHEUS_ADDRESS`: Prometheus compatible TSDB endpoint
 - `GITHUB_PULL_REQUEST`: GitHub PR to create comment on
 - `GITHUB_EVENT_NAME`: set to `pull_request`
 - `GITHUB_TOKEN`: set to a token that is able to comment on PRs
@@ -84,7 +83,3 @@ Set the following environment variables:
 ```
 go run ./cmd/bot/
 ```
-## Debugging
-
-- checkout the change in `kube-manifests` that you want to generate a cost estimate report for.
-This also includes to set `master` to the right hash.
