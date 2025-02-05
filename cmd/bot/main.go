@@ -60,14 +60,14 @@ func realMain(ctx context.Context) error {
 			HTTPConfigFile:              cfg.Prometheus.Prod.HTTPConfigFile,
 			Username:                    cfg.Prometheus.Prod.Username,
 			Password:                    cfg.Prometheus.Prod.Password,
-			UseCloudCostExporterMetrics: cfg.UseCloudCostExporter,
+			UseCloudCostExporterMetrics: cfg.UseCloudCostExporterMetrics,
 		},
 		&costmodel.ClientConfig{
 			Address:                     cfg.Prometheus.Dev.Address,
 			HTTPConfigFile:              cfg.Prometheus.Dev.HTTPConfigFile,
 			Username:                    cfg.Prometheus.Dev.Username,
 			Password:                    cfg.Prometheus.Dev.Password,
-			UseCloudCostExporterMetrics: cfg.UseCloudCostExporter,
+			UseCloudCostExporterMetrics: cfg.UseCloudCostExporterMetrics,
 		})
 	if err != nil {
 		return fmt.Errorf("creating cost model client: %w", err)
