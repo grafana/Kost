@@ -26,10 +26,13 @@ While these are what we use internally and require, in theory the bot should wor
 ## Prerequisites for local development
 
 - HTTP access to a prometheus server that has [cloudcost-exporter](https://github.com/grafana/cloudcost-exporter) metrics available
+  - For example, navigate to `https://<grafana-address>/connections/datasources/`, identify the Prometheus (or Mimir!) datasource to use, and copy the value of `Prometheus server URL`.
 - A local copy of the repository that stores kube-manifest files
   - See [flux](https://fluxcd.io/flux/guides/repository-structure/) docs a similar structure to what Grafana Labs uses
-- If you have a Mimir instance running on Grafana Cloud, create an [access policy token](https://grafana.com/docs/grafana-cloud/account-management/authentication-and-permissions/access-policies/) with `metrics:read` permissions
-- Create a yaml file with basic auth creds to use. Replace password with the token you created earlier.
+- If you have a Mimir instance running on Grafana Cloud, create an [access policy with a token](https://grafana.com/docs/grafana-cloud/account-management/authentication-and-permissions/access-policies/) with `metrics:read` permissions
+- Create a yaml file with basic auth creds to use (see below).
+  - Replace `<user>` with the the username of the datasource account. For example, after finding the datasource to use in `https://<grafana-address>/connections/datasources/`, find the username under `Authentication` > `Basic authentiaction` > `User`.
+  - Replace `<password>` with the token you created earlier.
 
 ```yaml
 basic_auth:
