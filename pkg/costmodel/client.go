@@ -166,6 +166,10 @@ func NewClients(prodConfig, devConfig *ClientConfig) (*Clients, error) {
 // GetCostPerCPU returns the average cost per CPU for a given cluster.
 func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error) {
 	query := fmt.Sprintf(queryCostPerCPU, cluster)
+	// TODO: Remove this once we've removed support for OpenCost
+	if c.useCloudCostExporterMetrics {
+		query = fmt.Sprintf(cloudcostExporterQueryCostPerCpu, cluster, cluster, cluster)
+	}
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err
@@ -176,6 +180,7 @@ func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error
 // GetMemoryCost returns the cost per memory for a given cluster
 func (c *Client) GetMemoryCost(ctx context.Context, cluster string) (Cost, error) {
 	query := fmt.Sprintf(queryMemoryCost, cluster)
+	// TODO: Remove this once we've removed support for OpenCost
 	if c.useCloudCostExporterMetrics {
 		query = fmt.Sprintf(cloudcostExporterQueryMemoryCost, cluster, cluster, cluster)
 	}
