@@ -32,6 +32,15 @@ avg by (spot) (node_cpu_hourly_cost{cluster="%s"}
            )
 )
 `
+	cloudcostExporterQueryCostPerCpu = `
+	avg by (price_tier) (
+		cloudcost_aws_ec2_instance_cpu_usd_per_core_hour{cluster_name="%s"}
+		or
+		cloudcost_azure_aks_instance_cpu_usd_per_core_hour{cluster_name="%s"}
+		or
+		cloudcost_gcp_gke_instance_cpu_usd_per_core_hour{cluster_name="%s"}
+)
+`
 
 	queryMemoryCost = `
 avg by (spot) (node_ram_hourly_cost{cluster="%s"}
@@ -47,6 +56,15 @@ avg by (spot) (node_ram_hourly_cost{cluster="%s"}
                  ,"spot", "false", "", ""
                )
            )
+)
+`
+	cloudcostExporterQueryMemoryCost = `
+	avg by (price_tier) (
+		cloudcost_aws_ec2_instance_memory_usd_per_gib_hour{cluster_name="%s"}
+		or
+		cloudcost_azure_aks_instance_memory_usd_per_gib_hour{cluster_name="%s"}
+		or
+		cloudcost_gcp_gke_instance_memory_usd_per_gib_hour{cluster_name="%s"}
 )
 `
 	queryPersistentVolumeCost = "avg_over_time(avg(pv_hourly_cost{cluster=\"%s\"})[24h:1m])"
@@ -70,7 +88,8 @@ var (
 
 // Client is a client for the cost model.
 type Client struct {
-	client api.Client
+	client                      api.Client
+	useCloudCostExporterMetrics bool
 }
 
 // Clients bundles the dev and prod client in one struct.
@@ -81,10 +100,11 @@ type Clients struct {
 
 // ClientConfig is the configuration for the cost model client.
 type ClientConfig struct {
-	Address        string
-	HTTPConfigFile string
-	Username       string
-	Password       string
+	Address                     string
+	HTTPConfigFile              string
+	Username                    string
+	Password                    string
+	UseCloudCostExporterMetrics bool
 }
 
 // NewClient creates a new cost model client with the given configuration.
@@ -123,7 +143,10 @@ func NewClient(config *ClientConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{client: client}, nil
+	return &Client{
+		client:                      client,
+		useCloudCostExporterMetrics: config.UseCloudCostExporterMetrics,
+	}, nil
 }
 
 // NewClients creates a new cost model clients with the given configuration.
@@ -153,6 +176,9 @@ func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error
 // GetMemoryCost returns the cost per memory for a given cluster
 func (c *Client) GetMemoryCost(ctx context.Context, cluster string) (Cost, error) {
 	query := fmt.Sprintf(queryMemoryCost, cluster)
+	if c.useCloudCostExporterMetrics {
+		query = fmt.Sprintf(cloudcostExporterQueryMemoryCost, cluster, cluster, cluster)
+	}
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err
@@ -202,6 +228,17 @@ func (c *Client) parseResults(results model.Value) (Cost, error) {
 			cost.Spot = value
 		case "false":
 			cost.NonSpot = value
+		default:
+			// This is when there is no spot/non-spot label
+			cost.Dollars = value
+		}
+		// Handles the case for cloudcost exporter metrics where `price_tier` is the label for spot/non-spot
+		// TODO: Delete after removing support for OpenCost
+		switch sample.Metric["price_tier"] {
+		case "ondemand":
+			cost.NonSpot = value
+		case "spot":
+			cost.Spot = value
 		default:
 			// This is when there is no spot/non-spot label
 			cost.Dollars = value

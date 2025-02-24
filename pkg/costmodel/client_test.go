@@ -205,7 +205,7 @@ func TestParseResults(t *testing.T) {
 				&model.Sample{Metric: model.Metric{"spot": "false"}, Value: 2.71},
 				&model.Sample{Metric: model.Metric{"spot": "true"}, Value: 1.41},
 			},
-			Cost{Spot: 1.41, NonSpot: 2.71},
+			Cost{Spot: 1.41, NonSpot: 2.71, Dollars: 1.41},
 			nil,
 		},
 	}
