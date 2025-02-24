@@ -166,10 +166,6 @@ func NewClients(prodConfig, devConfig *ClientConfig) (*Clients, error) {
 // GetCostPerCPU returns the average cost per CPU for a given cluster.
 func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error) {
 	query := fmt.Sprintf(queryCostPerCPU, cluster)
-	if c.useCloudCostExporterMetrics {
-		query = fmt.Sprintf(cloudcostExporterQueryCostPerCpu, cluster, cluster, cluster)
-	}
-	fmt.Printf("query: %s\n", query)
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err
