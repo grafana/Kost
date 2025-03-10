@@ -168,7 +168,7 @@ func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error
 	query := fmt.Sprintf(queryCostPerCPU, cluster)
 	// TODO: Remove this once we've removed support for OpenCost
 	if c.useCloudCostExporterMetrics {
-		slog.Debug("GetMemoryCost", "cluster", cluster, "message", "using cloudcost exporter metrics")
+		slog.Info("GetMemoryCost", "cluster", cluster, "message", "using cloudcost exporter metrics")
 		query = fmt.Sprintf(cloudcostExporterQueryCostPerCpu, cluster, cluster, cluster)
 	}
 	results, err := c.query(ctx, query)
@@ -183,7 +183,7 @@ func (c *Client) GetMemoryCost(ctx context.Context, cluster string) (Cost, error
 	query := fmt.Sprintf(queryMemoryCost, cluster)
 	// TODO: Remove this once we've removed support for OpenCost
 	if c.useCloudCostExporterMetrics {
-		slog.Debug("GetMemoryCost", "cluster", cluster, "message", "using cloudcost exporter metrics")
+		slog.Info("GetMemoryCost", "cluster", cluster, "message", "using cloudcost exporter metrics")
 		query = fmt.Sprintf(cloudcostExporterQueryMemoryCost, cluster, cluster, cluster)
 	}
 	results, err := c.query(ctx, query)
