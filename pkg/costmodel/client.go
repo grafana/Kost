@@ -135,7 +135,7 @@ func NewClient(config *ClientConfig) (*Client, error) {
 		fmt.Println("HTTP config file and basic auth not provided, using no authentication")
 	}
 
-	roundTripper, err := configutil.NewRoundTripperFromConfig(*cfg, "grafana-kost-estimator", configutil.WithHTTP2Disabled())
+	roundTripper, err := configutil.NewRoundTripperFromConfig(*cfg, "grafana-kost-estimator", configutil.WithHTTP2Disabled(), configutil.WithUserAgent("grafana-kost-estimator"))
 	if err != nil {
 		return nil, fmt.Errorf("error creating round tripper: %v", err)
 	}
