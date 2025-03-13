@@ -31,11 +31,10 @@ type config struct {
 
 	GitHub github.Config
 
-	IsCI                        bool   `envconfig:"CI"`
-	PR                          int    `envconfig:"GITHUB_PULL_REQUEST" required:"true"`
-	Event                       string `envconfig:"GITHUB_EVENT_NAME"`
-	LogLevel                    string `envconfig:"LOG_LEVEL" default:"info"`
-	UseCloudCostExporterMetrics bool   `envconfig:"USE_CLOUD_COST_EXPORTER" default:"false"`
+	IsCI     bool   `envconfig:"CI"`
+	PR       int    `envconfig:"GITHUB_PULL_REQUEST" required:"true"`
+	Event    string `envconfig:"GITHUB_EVENT_NAME"`
+	LogLevel string `envconfig:"LOG_LEVEL" default:"info"`
 }
 
 const pullRequestEvent = "pull_request"

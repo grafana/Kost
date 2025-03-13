@@ -11,7 +11,6 @@ import (
 
 func main() {
 	var fromFile, toFile, prometheusAddress, httpConfigFile, reportType, username, password string
-	var useCloudCostExporterMetrics bool
 	flag.StringVar(&fromFile, "from", "", "The file to compare from")
 	flag.StringVar(&toFile, "to", "", "The file to compare to")
 	flag.StringVar(&prometheusAddress, "prometheus.address", "http://localhost:9093/prometheus", "The Address of the prometheus server")
@@ -19,19 +18,18 @@ func main() {
 	flag.StringVar(&username, "username", "", "Mimir username")
 	flag.StringVar(&password, "password", "", "Mimir password")
 	flag.StringVar(&reportType, "report.type", "table", "The type of report to generate. Options are: table, summary")
-	flag.BoolVar(&useCloudCostExporterMetrics, "use.cloud.cost.exporter.metrics", false, "Whether to use the cloud cost exporter metrics")
 	flag.Parse()
 
 	clusters := flag.Args()
 
 	ctx := context.Background()
-	if err := run(ctx, fromFile, toFile, prometheusAddress, httpConfigFile, reportType, username, password, clusters, useCloudCostExporterMetrics); err != nil {
+	if err := run(ctx, fromFile, toFile, prometheusAddress, httpConfigFile, reportType, username, password, clusters); err != nil {
 		fmt.Printf("Could not run: %s\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, fromFile, toFile, address, httpConfigFile, reportType, username, password string, clusters []string, useCloudCostExporterMetrics bool) error {
+func run(ctx context.Context, fromFile, toFile, address, httpConfigFile, reportType, username, password string, clusters []string) error {
 	from, err := os.ReadFile(fromFile)
 	if err != nil {
 		return fmt.Errorf("could not read file: %s", err)
@@ -44,11 +42,10 @@ func run(ctx context.Context, fromFile, toFile, address, httpConfigFile, reportT
 	}
 
 	client, err := costmodel.NewClient(&costmodel.ClientConfig{
-		Address:                     address,
-		HTTPConfigFile:              httpConfigFile,
-		Username:                    username,
-		Password:                    password,
-		UseCloudCostExporterMetrics: useCloudCostExporterMetrics,
+		Address:        address,
+		HTTPConfigFile: httpConfigFile,
+		Username:       username,
+		Password:       password,
 	})
 
 	if err != nil {

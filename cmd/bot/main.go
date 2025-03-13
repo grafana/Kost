@@ -56,18 +56,16 @@ func realMain(ctx context.Context) error {
 
 	prometheusClients, err := costmodel.NewClients(
 		&costmodel.ClientConfig{
-			Address:                     cfg.Prometheus.Prod.Address,
-			HTTPConfigFile:              cfg.Prometheus.Prod.HTTPConfigFile,
-			Username:                    cfg.Prometheus.Prod.Username,
-			Password:                    cfg.Prometheus.Prod.Password,
-			UseCloudCostExporterMetrics: cfg.UseCloudCostExporterMetrics,
+			Address:        cfg.Prometheus.Prod.Address,
+			HTTPConfigFile: cfg.Prometheus.Prod.HTTPConfigFile,
+			Username:       cfg.Prometheus.Prod.Username,
+			Password:       cfg.Prometheus.Prod.Password,
 		},
 		&costmodel.ClientConfig{
-			Address:                     cfg.Prometheus.Dev.Address,
-			HTTPConfigFile:              cfg.Prometheus.Dev.HTTPConfigFile,
-			Username:                    cfg.Prometheus.Dev.Username,
-			Password:                    cfg.Prometheus.Dev.Password,
-			UseCloudCostExporterMetrics: cfg.UseCloudCostExporterMetrics,
+			Address:        cfg.Prometheus.Dev.Address,
+			HTTPConfigFile: cfg.Prometheus.Dev.HTTPConfigFile,
+			Username:       cfg.Prometheus.Dev.Username,
+			Password:       cfg.Prometheus.Dev.Password,
 		})
 	if err != nil {
 		return fmt.Errorf("creating cost model client: %w", err)

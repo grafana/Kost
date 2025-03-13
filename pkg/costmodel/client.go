@@ -16,23 +16,7 @@ import (
 )
 
 const (
-	queryCostPerCPU = `
-avg by (spot) (node_cpu_hourly_cost{cluster="%s"}
-* on (cluster, node) group_left(spot)
-           group by (cluster, node, spot) (
-               label_replace(
-                 label_join(kubecost_node_is_spot == 1, "node", "", "exported_instance")
-                 ,"spot", "true", "", ""
-               )
-               or on (cluster, node)
-                 label_replace(
-                   label_join(kubecost_node_is_spot == 0, "node", "", "exported_instance")
-                 ,"spot", "false", "", ""
-               )
-           )
-)
-`
-	cloudcostExporterQueryCostPerCpu = `
+	queryCostPerCpu = `
 	avg by (price_tier) (
 		cloudcost_aws_ec2_instance_cpu_usd_per_core_hour{cluster_name="%s"}
 		or
@@ -41,24 +25,7 @@ avg by (spot) (node_cpu_hourly_cost{cluster="%s"}
 		cloudcost_gcp_gke_instance_cpu_usd_per_core_hour{cluster_name="%s"}
 )
 `
-
 	queryMemoryCost = `
-avg by (spot) (node_ram_hourly_cost{cluster="%s"}
-* on (cluster, node) group_left(spot)
-           group by (cluster, node, spot) (
-               label_replace(
-                 label_join(kubecost_node_is_spot == 1, "node", "", "exported_instance")
-                 ,"spot", "true", "", ""
-               )
-               or on (cluster, node)
-                 label_replace(
-                   label_join(kubecost_node_is_spot == 0, "node", "", "exported_instance")
-                 ,"spot", "false", "", ""
-               )
-           )
-)
-`
-	cloudcostExporterQueryMemoryCost = `
 	avg by (price_tier) (
 		cloudcost_aws_ec2_instance_memory_usd_per_gib_hour{cluster_name="%s"}
 		or
@@ -67,13 +34,9 @@ avg by (spot) (node_ram_hourly_cost{cluster="%s"}
 		cloudcost_gcp_gke_instance_memory_usd_per_gib_hour{cluster_name="%s"}
 )
 `
+
+	// TODO(@Pokom): update this query with azure's PVC's cost once https://github.com/grafana/cloudcost-exporter/issues/236 is merged in
 	queryPersistentVolumeCost = `
-avg_over_time(
-				avg(
-					pv_hourly_cost{cluster="%s"}
-				)[24h:1m]
-)`
-	cloudcostQueryPersistentVolumeCost = `
 			avg(
 				cloudcost_aws_ec2_persistent_volume_usd_per_hour{persistentvolume!="", state="in-use"}
 				/ on (persistentvolume) group_left() (
@@ -112,8 +75,7 @@ var (
 
 // Client is a client for the cost model.
 type Client struct {
-	client                      api.Client
-	useCloudCostExporterMetrics bool
+	client api.Client
 }
 
 // Clients bundles the dev and prod client in one struct.
@@ -124,11 +86,10 @@ type Clients struct {
 
 // ClientConfig is the configuration for the cost model client.
 type ClientConfig struct {
-	Address                     string
-	HTTPConfigFile              string
-	Username                    string
-	Password                    string
-	UseCloudCostExporterMetrics bool
+	Address        string
+	HTTPConfigFile string
+	Username       string
+	Password       string
 }
 
 // NewClient creates a new cost model client with the given configuration.
@@ -168,8 +129,7 @@ func NewClient(config *ClientConfig) (*Client, error) {
 		return nil, err
 	}
 	return &Client{
-		client:                      client,
-		useCloudCostExporterMetrics: config.UseCloudCostExporterMetrics,
+		client: client,
 	}, nil
 }
 
@@ -189,12 +149,7 @@ func NewClients(prodConfig, devConfig *ClientConfig) (*Clients, error) {
 
 // GetCostPerCPU returns the average cost per CPU for a given cluster.
 func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error) {
-	query := fmt.Sprintf(queryCostPerCPU, cluster)
-	// TODO: Remove this once we've removed support for OpenCost
-	if c.useCloudCostExporterMetrics {
-		slog.Info("GetMemoryCost", "cluster", cluster, "message", "using cloudcost exporter metrics")
-		query = fmt.Sprintf(cloudcostExporterQueryCostPerCpu, cluster, cluster, cluster)
-	}
+	query := fmt.Sprintf(queryCostPerCpu, cluster, cluster, cluster)
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err
@@ -204,12 +159,7 @@ func (c *Client) GetCostPerCPU(ctx context.Context, cluster string) (Cost, error
 
 // GetMemoryCost returns the cost per memory for a given cluster
 func (c *Client) GetMemoryCost(ctx context.Context, cluster string) (Cost, error) {
-	query := fmt.Sprintf(queryMemoryCost, cluster)
-	// TODO: Remove this once we've removed support for OpenCost
-	if c.useCloudCostExporterMetrics {
-		slog.Info("GetMemoryCost", "cluster", cluster, "message", "using cloudcost exporter metrics")
-		query = fmt.Sprintf(cloudcostExporterQueryMemoryCost, cluster, cluster, cluster)
-	}
+	query := fmt.Sprintf(queryMemoryCost, cluster, cluster, cluster)
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err
@@ -235,11 +185,7 @@ func (c *Client) GetNodeCount(ctx context.Context, cluster string) (int, error) 
 
 // GetCostForPersistentVolume returns the average cost per persistent volume for a given cluster
 func (c *Client) GetCostForPersistentVolume(ctx context.Context, cluster string) (Cost, error) {
-	query := fmt.Sprintf(queryPersistentVolumeCost, cluster)
-	if c.useCloudCostExporterMetrics {
-		slog.Info("GetCostForPersistentVolume", "cluster", cluster, "message", "using cloudcost exporter metrics")
-		query = fmt.Sprintf(cloudcostQueryPersistentVolumeCost, cluster, cluster, cluster, cluster)
-	}
+	query := fmt.Sprintf(queryPersistentVolumeCost, cluster, cluster, cluster, cluster)
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err
