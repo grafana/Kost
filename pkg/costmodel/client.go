@@ -67,7 +67,31 @@ avg by (spot) (node_ram_hourly_cost{cluster="%s"}
 		cloudcost_gcp_gke_instance_memory_usd_per_gib_hour{cluster_name="%s"}
 )
 `
-	queryPersistentVolumeCost = "avg_over_time(avg(pv_hourly_cost{cluster=\"%s\"})[24h:1m])"
+	queryPersistentVolumeCost = `
+avg_over_time(
+				avg(
+					pv_hourly_cost{cluster="%s"}
+				)[24h:1m]
+)`
+	cloudcostQueryPersistentVolumeCost = `
+			avg(
+				cloudcost_aws_ec2_persistent_volume_usd_per_hour{persistentvolume!="", state="in-use"}
+				/ on (persistentvolume) group_left() (
+                    kube_persistentvolume_capacity_bytes{cluster="%s"} / 1e9
+                )
+            )
+			or
+				avg(
+					cloudcost_gcp_gke_persistent_volume_usd_per_hour{persistentvolume!="", use_status="in-use", cluster_name="%s"}
+					/ on (persistentvolume) group_left() (
+						kube_persistentvolume_capacity_bytes{cluster="%s"} / 1e9
+				)
+			)
+			or
+			avg(
+				pv_hourly_cost{cluster="%s"}
+			)
+`
 
 	queryAverageNodeCount = `
 		avg_over_time(
@@ -212,6 +236,10 @@ func (c *Client) GetNodeCount(ctx context.Context, cluster string) (int, error) 
 // GetCostForPersistentVolume returns the average cost per persistent volume for a given cluster
 func (c *Client) GetCostForPersistentVolume(ctx context.Context, cluster string) (Cost, error) {
 	query := fmt.Sprintf(queryPersistentVolumeCost, cluster)
+	if c.useCloudCostExporterMetrics {
+		slog.Info("GetCostForPersistentVolume", "cluster", cluster, "message", "using cloudcost exporter metrics")
+		query = fmt.Sprintf(cloudcostQueryPersistentVolumeCost, cluster, cluster, cluster, cluster)
+	}
 	results, err := c.query(ctx, query)
 	if err != nil {
 		return Cost{}, err

@@ -1,0 +1,147 @@
+{
+    "apiVersion": "apps/v1",
+    "kind": "StatefulSet",
+    "metadata": {
+        "creationTimestamp": "2022-10-05T20:38:31Z",
+        "generation": 17,
+        "labels": {
+            "kustomize.toolkit.fluxcd.io/name": "kube-manifests-opencost",
+            "kustomize.toolkit.fluxcd.io/namespace": "opencost",
+            "tanka.dev/environment": "85ead74422d749cb54711e74c81bc5d6ed6da54e92b5fa69"
+        },
+        "name": "opencost",
+        "namespace": "opencost",
+        "resourceVersion": "2386985939",
+        "uid": "56495ef8-2650-46e8-9528-28759cf47151"
+    },
+    "spec": {
+        "podManagementPolicy": "OrderedReady",
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+            "matchLabels": {
+                "name": "opencost"
+            }
+        },
+        "serviceName": "opencost",
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "name": "opencost"
+                }
+            },
+            "spec": {
+                "affinity": {
+                    "nodeAffinity": {
+                        "preferredDuringSchedulingIgnoredDuringExecution": [
+                            {
+                                "preference": {
+                                    "matchExpressions": [
+                                        {
+                                            "key": "cloud.google.com/gke-spot",
+                                            "operator": "In",
+                                            "values": [
+                                                "true"
+                                            ]
+                                        }
+                                    ]
+                                },
+                                "weight": 100
+                            }
+                        ]
+                    }
+                },
+                "containers": [
+                    {
+                        "env": [
+                        ],
+                        "image": "quay.io/kubecost1/kubecost-cost-model:prod-1.100.0",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "opencost",
+                        "ports": [
+                            {
+                                "containerPort": 9003,
+                                "name": "http-metrics",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {
+                            "limits": {
+                                "cpu": "4",
+                                "memory": "8Gi"
+                            },
+                            "requests": {
+                                "cpu": "1",
+                                "memory": "4Gi"
+                            }
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/configs",
+                                "name": "opencost-data"
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {
+                    "fsGroup": 10001
+                },
+                "serviceAccount": "opencost",
+                "serviceAccountName": "opencost",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoSchedule",
+                        "key": "type",
+                        "operator": "Equal",
+                        "value": "spot-node"
+                    }
+                ]
+            }
+        },
+        "updateStrategy": {
+            "type": "RollingUpdate"
+        },
+        "volumeClaimTemplates": [
+            {
+                "apiVersion": "v1",
+                "kind": "PersistentVolumeClaim",
+                "metadata": {
+                    "creationTimestamp": null,
+                    "name": "opencost-data"
+                },
+                "spec": {
+                    "accessModes": [
+                        "ReadWriteOnce"
+                    ],
+                    "resources": {
+                        "requests": {
+                            "storage": "320Gi"
+                        }
+                    },
+                    "volumeMode": "Filesystem"
+                },
+                "status": {
+                    "phase": "Pending"
+                }
+            }
+        ]
+    },
+    "status": {
+        "availableReplicas": 1,
+        "collisionCount": 0,
+        "currentReplicas": 1,
+        "currentRevision": "opencost-6666f8bdb7",
+        "observedGeneration": 17,
+        "readyReplicas": 1,
+        "replicas": 1,
+        "updateRevision": "opencost-6666f8bdb7",
+        "updatedReplicas": 1
+    }
+}
