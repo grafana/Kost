@@ -12,14 +12,16 @@ require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/common v0.53.0
 	github.com/shurcooL/githubv4 v0.0.0-20230305132112-efb623903184
-	golang.org/x/oauth2 v0.20.0
-	golang.org/x/text v0.15.0
+	golang.org/x/oauth2 v0.25.0
 	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
 )
 
-require github.com/google/go-github/v62 v62.0.0 // indirect
+require (
+	github.com/google/go-github/v62 v62.0.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
+)
 
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8 // indirect
