@@ -5,9 +5,9 @@ name: Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-lint-test:
@@ -23,7 +23,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v4
         with:
-          version: v1.56
+          version: v1.64.7
 
       - name: Test
         run: go test -v ./...
