@@ -1,8 +1,8 @@
 module github.com/grafana/kost
 
-go 1.22.0
+go 1.23.0
 
-toolchain go1.22.2
+toolchain go1.24.1
 
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.11.0
@@ -21,7 +21,7 @@ require (
 require (
 	github.com/google/go-github/v62 v62.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
 )
 
 require (
@@ -44,7 +44,7 @@ require (
 	github.com/shurcooL/graphql v0.0.0-20220606043923-3cf50f8a0a29 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sync v0.10.0
+	golang.org/x/sync v0.12.0
 	golang.org/x/sys v0.28.0 // indirect
 	google.golang.org/protobuf v1.36.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
