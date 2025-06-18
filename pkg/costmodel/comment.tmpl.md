@@ -25,7 +25,7 @@
 
 
 <sub>See the [FAQ](https://github.com/grafana/deployment_tools/blob/master/docker/k8s-cost-estimator/FAQ.md) for any questions!
-<sub>Still need help? Then join us in the [`#platform-capacity-chat`](https://raintank-corp.slack.com/archives/C03PDLFK29K) channel.</sub>
+<sub>Still need help? Then join us in the [`#platform-monitoring-chat`](https://raintank-corp.slack.com/archives/C03PDLFK29K) channel.</sub>
 
 <sub></sub>
 {{- /* TEMPLATES */ -}}
@@ -73,10 +73,10 @@ Monthly cost for the affected resources will {{ if $increased }}increase by {{ d
 <details>
   <summary> Details for <code class="notranslate">{{ $cluster}}</code></summary>
 
-| Namespace | Resource | CPU | Memory | Storage | Total | 
-| - | - | - | - | - | - | 
+| Namespace | Resource | CPU | Memory | Storage | Total |
+| - | - | - | - | - | - |
 {{ range $resources -}}| `{{ .New.Namespace }}` | `{{ .New.Kind }}`<br/>`{{ .New.Name }}` | {{ dollars .New.CPU }} | {{ dollars .New.Memory }} | {{ dollars .New.Storage }} | {{ dollars .New.Total }} |
-{{ end }} 
+{{ end }}
 </details>
 {{ end }}
 {{ end }}
