@@ -25,7 +25,7 @@
 
 
 <sub>See the [FAQ](https://github.com/grafana/deployment_tools/blob/master/docker/k8s-cost-estimator/FAQ.md) for any questions!
-<sub>Still need help? Then join us in the [`#platform-capacity-chat`](https://raintank-corp.slack.com/archives/C03PDLFK29K) channel.</sub>
+<sub>Still need help? Then join us in the [`#platform-monitoring-chat`](https://grafanalabs.enterprise.slack.com/archives/C03PDLFK29K) channel.</sub>
 
 <sub></sub>
 {{- /* TEMPLATES */ -}}
