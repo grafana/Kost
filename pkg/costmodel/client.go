@@ -325,17 +325,28 @@ func (c *Clients) GetClusterCosts(ctx context.Context, cluster string) (*CostMod
 	defer func() {
 		slog.Info("GetClusterCosts", "cluster", cluster, "duration", time.Since(start))
 	}()
-	var cost *CostModel
-	var err error
-	// if dev client is present
-	client := c.Prod
-	if c.Dev != nil && strings.HasPrefix(cluster, "dev-") {
-		client = c.Dev
-	}
-	cost, err = GetCostModelForCluster(ctx, client, cluster)
+	cost, err := GetCostModelForCluster(ctx, c.clientFor(cluster), cluster)
 	if err != nil {
 		// TODO here we should probably return an error like below
 		return nil, fmt.Errorf("fetching cost model for cluster %s: %w", cluster, err)
 	}
 	return cost, nil
+}
+
+// clientFor picks the prod or dev client based on cluster name prefix.
+func (c *Clients) clientFor(cluster string) *Client {
+	if c.Dev != nil && strings.HasPrefix(cluster, "dev-") {
+		return c.Dev
+	}
+	return c.Prod
+}
+
+// HPATargeting routes to the appropriate prod/dev client based on cluster prefix.
+func (c *Clients) HPATargeting(ctx context.Context, cluster, namespace, kind, name string) (string, error) {
+	return c.clientFor(cluster).HPATargeting(ctx, cluster, namespace, kind, name)
+}
+
+// GetObservedReplicas routes to the appropriate prod/dev client based on cluster prefix.
+func (c *Clients) GetObservedReplicas(ctx context.Context, cluster, namespace, kind, name string) (float64, error) {
+	return c.clientFor(cluster).GetObservedReplicas(ctx, cluster, namespace, kind, name)
 }

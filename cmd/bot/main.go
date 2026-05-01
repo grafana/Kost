@@ -158,7 +158,7 @@ func realMain(ctx context.Context) error {
 			return fmt.Errorf("added manifests: %w", err)
 		}
 
-		reporter.AddReport(cost, costmodel.Requirements{}, req)
+		reporter.AddReportWithResolvedReplicas(ctx, prometheusClients, cost, costmodel.Requirements{}, req)
 	}
 	slog.Info("Finished processing added files", "count", len(cf.Added), "duration", time.Since(start))
 
@@ -173,7 +173,7 @@ func realMain(ctx context.Context) error {
 			return fmt.Errorf("deleted manifest: %w", err)
 		}
 
-		reporter.AddReport(cost, req, costmodel.Requirements{})
+		reporter.AddReportWithResolvedReplicas(ctx, prometheusClients, cost, req, costmodel.Requirements{})
 	}
 	slog.Info("Finished processing deleted files", "count", len(cf.Deleted), "duration", time.Since(start))
 
@@ -195,7 +195,7 @@ func realMain(ctx context.Context) error {
 			return fmt.Errorf("new manifest: %w", err)
 		}
 
-		reporter.AddReport(cost, from, to)
+		reporter.AddReportWithResolvedReplicas(ctx, prometheusClients, cost, from, to)
 	}
 	slog.Info("Finished processing modified files", "count", len(cf.Modified), "duration", time.Since(start))
 
@@ -218,7 +218,7 @@ func realMain(ctx context.Context) error {
 			return fmt.Errorf("manifest after renaming: %w", err)
 		}
 
-		reporter.AddReport(cost, from, to)
+		reporter.AddReportWithResolvedReplicas(ctx, prometheusClients, cost, from, to)
 	}
 	slog.Info("Finished processing renamed files", "count", len(cf.Renamed), "duration", time.Since(start))
 

@@ -69,7 +69,7 @@ func run(ctx context.Context, fromFile, toFile, address, httpConfigFile, reportT
 		if err != nil {
 			return fmt.Errorf("could not parse manifest file(%s): %s", toFile, err)
 		}
-		reporter.AddReport(cost, fromRequests, toRequests)
+		reporter.AddReportWithResolvedReplicas(ctx, client, cost, fromRequests, toRequests)
 	}
 
 	return reporter.Write()

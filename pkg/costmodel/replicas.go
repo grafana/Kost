@@ -24,7 +24,10 @@ type HPAResolver interface {
 	GetObservedReplicas(ctx context.Context, cluster, namespace, kind, name string) (float64, error)
 }
 
-var _ HPAResolver = (*Client)(nil)
+var (
+	_ HPAResolver = (*Client)(nil)
+	_ HPAResolver = (*Clients)(nil)
+)
 
 // ResolveReplicas decides the right replica count for a workload at PR-cost-estimation time.
 // If no HPA targets the workload, the manifest count is authoritative.
