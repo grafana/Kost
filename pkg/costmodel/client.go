@@ -61,16 +61,21 @@ const (
 			sum(nodepool:node:sum{cluster="%s"})[30d:1d]
 		)
 	`
+
+	// queryHPATargeting filters kube_horizontalpodautoscaler_info by the workload it targets.
+	// The horizontalpodautoscaler label on a hit holds the HPA name (also used by KEDA-managed HPAs).
+	queryHPATargeting = `kube_horizontalpodautoscaler_info{cluster="%s", namespace="%s", scaletargetref_kind="%s", scaletargetref_name="%s"}`
 )
 
 // ErrNoResults is the error returned when querying for costs returns
 // no results.
 var (
-	ErrNoResults         = errors.New("no cost results")
-	ErrBadQuery          = errors.New("bad query")
-	ErrNilConfig         = errors.New("client config is nil")
-	ErrEmptyAddress      = errors.New("client address can't be empty")
-	ErrProdConfigMissing = errors.New("prod config is missing")
+	ErrNoResults          = errors.New("no cost results")
+	ErrBadQuery           = errors.New("bad query")
+	ErrNilConfig          = errors.New("client config is nil")
+	ErrEmptyAddress       = errors.New("client address can't be empty")
+	ErrProdConfigMissing  = errors.New("prod config is missing")
+	ErrHPADetectionFailed = errors.New("hpa detection failed")
 )
 
 // Client is a client for the cost model.
@@ -181,6 +186,31 @@ func (c *Client) GetNodeCount(ctx context.Context, cluster string) (int, error) 
 	}
 
 	return int(result[0].Value), nil
+}
+
+// HPATargeting returns the name of the HorizontalPodAutoscaler targeting the given
+// (cluster, namespace, kind, name) workload, or an empty string if no HPA targets it.
+// Works for vanilla HPAs and KEDA-managed HPAs (KEDA creates a regular HPA underneath).
+// Transport or unexpected response shape errors are wrapped with ErrHPADetectionFailed
+// so callers can distinguish "definitely not HPA-managed" from "we couldn't tell."
+func (c *Client) HPATargeting(ctx context.Context, cluster, namespace, kind, name string) (string, error) {
+	query := fmt.Sprintf(queryHPATargeting, cluster, namespace, kind, name)
+	results, err := c.query(ctx, query)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrHPADetectionFailed, err)
+	}
+	vec, ok := results.(model.Vector)
+	if !ok {
+		return "", fmt.Errorf("%w: unexpected result type %T", ErrHPADetectionFailed, results)
+	}
+	if len(vec) == 0 {
+		return "", nil
+	}
+	hpa := string(vec[0].Metric["horizontalpodautoscaler"])
+	if hpa == "" {
+		return "", fmt.Errorf("%w: missing horizontalpodautoscaler label", ErrHPADetectionFailed)
+	}
+	return hpa, nil
 }
 
 // GetCostForPersistentVolume returns the average cost per persistent volume for a given cluster
