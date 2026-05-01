@@ -65,6 +65,10 @@ const (
 	// queryHPATargeting filters kube_horizontalpodautoscaler_info by the workload it targets.
 	// The horizontalpodautoscaler label on a hit holds the HPA name (also used by KEDA-managed HPAs).
 	queryHPATargeting = `kube_horizontalpodautoscaler_info{cluster="%s", namespace="%s", scaletargetref_kind="%s", scaletargetref_name="%s"}`
+
+	// queryObservedReplicas reports the average actual replica count over a 7d window.
+	// Format args: metric, cluster, namespace, kindLabel, name.
+	queryObservedReplicas = `avg(avg_over_time(%s{cluster="%s", namespace="%s", %s="%s"}[7d]))`
 )
 
 // ErrNoResults is the error returned when querying for costs returns
@@ -76,6 +80,7 @@ var (
 	ErrEmptyAddress       = errors.New("client address can't be empty")
 	ErrProdConfigMissing  = errors.New("prod config is missing")
 	ErrHPADetectionFailed = errors.New("hpa detection failed")
+	ErrUnsupportedKind    = errors.New("unsupported workload kind")
 )
 
 // Client is a client for the cost model.
@@ -186,6 +191,45 @@ func (c *Client) GetNodeCount(ctx context.Context, cluster string) (int, error) 
 	}
 
 	return int(result[0].Value), nil
+}
+
+// GetObservedReplicas returns the 7-day average replica count for the given workload
+// from kube-state-metrics, regardless of who scales it (HPA, KEDA, manual). Used to
+// substitute manifest replicas with reality for HPA-managed workloads.
+// Returns ErrUnsupportedKind for kinds without a replica-count metric (DaemonSet, Pod, Job).
+// Returns ErrNoResults if the query succeeds but has no samples (e.g., brand-new workload
+// with no history) — callers should surface this rather than silently fall back.
+func (c *Client) GetObservedReplicas(ctx context.Context, cluster, namespace, kind, name string) (float64, error) {
+	metric, kindLabel, err := replicaMetricForKind(kind)
+	if err != nil {
+		return 0, err
+	}
+	query := fmt.Sprintf(queryObservedReplicas, metric, cluster, namespace, kindLabel, name)
+	results, err := c.query(ctx, query)
+	if err != nil {
+		return 0, ErrBadQuery
+	}
+	vec, ok := results.(model.Vector)
+	if !ok {
+		return 0, ErrBadQuery
+	}
+	if len(vec) == 0 {
+		return 0, ErrNoResults
+	}
+	return float64(vec[0].Value), nil
+}
+
+// replicaMetricForKind returns the kube-state-metrics metric name and the label
+// holding the workload name for a given Kubernetes kind.
+func replicaMetricForKind(kind string) (metric, label string, err error) {
+	switch kind {
+	case "Deployment":
+		return "kube_deployment_status_replicas", "deployment", nil
+	case "StatefulSet":
+		return "kube_statefulset_replicas", "statefulset", nil
+	default:
+		return "", "", fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
+	}
 }
 
 // HPATargeting returns the name of the HorizontalPodAutoscaler targeting the given
