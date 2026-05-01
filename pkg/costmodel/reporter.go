@@ -30,6 +30,8 @@ type Reporter struct {
 	Writer     io.Writer
 	reports    []report
 	reportType ReportType
+	warnings   []string
+	errors     []string
 }
 
 // report is a model for a cost report.
@@ -49,6 +51,19 @@ func (r *Reporter) AddReport(costModel *CostModel, from, to Requirements) {
 		From:      from,
 		To:        to,
 	})
+}
+
+// AddWarning records a non-fatal message that will be surfaced in the markdown
+// report under the Warnings section. Use for expected events or known limitations
+// (e.g., observed-replicas substitution applied for an HPA-managed workload).
+func (r *Reporter) AddWarning(msg string) {
+	r.warnings = append(r.warnings, msg)
+}
+
+// AddError records a message about an unexpected event that may have led to
+// inaccurate cost numbers. Surfaced under the Errors section in the markdown report.
+func (r *Reporter) AddError(msg string) {
+	r.errors = append(r.errors, msg)
 }
 
 func New(w io.Writer, reportType string) *Reporter {

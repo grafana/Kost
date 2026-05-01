@@ -256,3 +256,71 @@ func TestReporter_Write(t *testing.T) {
 		}
 	})
 }
+
+func TestReporter_AddWarning_AppearsInMarkdown(t *testing.T) {
+	cm := &CostModel{
+		Cluster:          &Cluster{Name: "test"},
+		CPU:              Cost{NonSpot: 1},
+		RAM:              Cost{NonSpot: 1},
+		PersistentVolume: Cost{NonSpot: 1},
+	}
+	req := Requirements{
+		CPUPerPod:    100,
+		MemoryPerPod: 1024 * 1024 * 1024,
+		Replicas:     1,
+		Kind:         "Deployment",
+		Namespace:    "ns",
+		Name:         "wk",
+	}
+
+	const msg = "HPA detection failed for ns/Deployment/wk: boom"
+	var s strings.Builder
+	r := New(&s, string(Markdown))
+	r.AddReport(cm, req, req)
+	r.AddWarning(msg)
+	if err := r.Write(); err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+
+	got := s.String()
+	if !strings.Contains(got, ":warning: Warnings") {
+		t.Errorf("expected :warning: section in output, got:\n%s", got)
+	}
+	if !strings.Contains(got, msg) {
+		t.Errorf("expected warning message %q in output, got:\n%s", msg, got)
+	}
+}
+
+func TestReporter_AddError_AppearsInMarkdown(t *testing.T) {
+	cm := &CostModel{
+		Cluster:          &Cluster{Name: "test"},
+		CPU:              Cost{NonSpot: 1},
+		RAM:              Cost{NonSpot: 1},
+		PersistentVolume: Cost{NonSpot: 1},
+	}
+	req := Requirements{
+		CPUPerPod:    100,
+		MemoryPerPod: 1024 * 1024 * 1024,
+		Replicas:     1,
+		Kind:         "Deployment",
+		Namespace:    "ns",
+		Name:         "wk",
+	}
+
+	const msg = "Mimir replicas query failed for ns/Deployment/wk: timeout"
+	var s strings.Builder
+	r := New(&s, string(Markdown))
+	r.AddReport(cm, req, req)
+	r.AddError(msg)
+	if err := r.Write(); err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+
+	got := s.String()
+	if !strings.Contains(got, ":exclamation: Errors") {
+		t.Errorf("expected :exclamation: section in output, got:\n%s", got)
+	}
+	if !strings.Contains(got, msg) {
+		t.Errorf("expected error message %q in output, got:\n%s", msg, got)
+	}
+}

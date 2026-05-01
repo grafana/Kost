@@ -137,8 +137,10 @@ var tpl = template.Must(template.New("").Funcs(templateFuncs).Parse(commentTempl
 // writeMarkdown
 func (r *Reporter) writeMarkdown() error {
 	d := templateData{
-		Reports: make(map[string]costReports),
-		Summary: make(map[string]summaryReport),
+		Reports:  make(map[string]costReports),
+		Summary:  make(map[string]summaryReport),
+		Warnings: append([]string(nil), r.warnings...),
+		Errors:   append([]string(nil), r.errors...),
 	}
 
 	for _, r := range r.reports {
