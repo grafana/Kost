@@ -23,9 +23,9 @@ func (c resourcesCost) Total() float64 {
 
 func resourcesCosts(m *CostModel, req Requirements) resourcesCost {
 	return resourcesCost{
-		CPU:       m.CPU.NonSpotCPUForPeriod(Monthly, req.CPU),
-		Memory:    m.RAM.NonSpotMemoryForPeriod(Monthly, req.Memory),
-		Storage:   m.PersistentVolume.DollarsForPeriod(Monthly, req.PersistentVolume),
+		CPU:       m.CPU.NonSpotCPUForPeriod(Monthly, req.TotalCPU()),
+		Memory:    m.RAM.NonSpotMemoryForPeriod(Monthly, req.TotalMemory()),
+		Storage:   m.PersistentVolume.DollarsForPeriod(Monthly, req.TotalPersistentVolume()),
 		Kind:      req.Kind,
 		Namespace: req.Namespace,
 		Name:      req.Name,
@@ -137,8 +137,10 @@ var tpl = template.Must(template.New("").Funcs(templateFuncs).Parse(commentTempl
 // writeMarkdown
 func (r *Reporter) writeMarkdown() error {
 	d := templateData{
-		Reports: make(map[string]costReports),
-		Summary: make(map[string]summaryReport),
+		Reports:  make(map[string]costReports),
+		Summary:  make(map[string]summaryReport),
+		Warnings: append([]string(nil), r.warnings...),
+		Errors:   append([]string(nil), r.errors...),
 	}
 
 	for _, r := range r.reports {

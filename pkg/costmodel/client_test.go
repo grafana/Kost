@@ -378,3 +378,225 @@ func TestClient_GetNodeCount(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_HPATargeting(t *testing.T) {
+	type Result struct {
+		Metric model.Metric     `json:"metric"`
+		Value  model.SamplePair `json:"value"`
+	}
+	type mockResponse struct {
+		Status string `json:"status"`
+		Data   struct {
+			Type   string   `json:"resultType"`
+			Result []Result `json:"result"`
+		} `json:"data"`
+	}
+
+	tests := []struct {
+		name        string
+		response    *mockResponse
+		statusCode  int
+		want        string
+		wantErrIs   error
+		wantErrNone bool
+	}{
+		{
+			name: "vector hit returns HPA name",
+			response: &mockResponse{
+				Status: "success",
+				Data: struct {
+					Type   string   `json:"resultType"`
+					Result []Result `json:"result"`
+				}{
+					Type: "vector",
+					Result: []Result{
+						{
+							Metric: model.Metric{
+								"horizontalpodautoscaler":    "keda-hpa-foo",
+								"scaletargetref_kind":        "Deployment",
+								"scaletargetref_name":        "foo",
+								"scaletargetref_api_version": "apps/v1",
+								"namespace":                  "ns",
+								"cluster":                    "c",
+							},
+							Value: model.SamplePair{Timestamp: model.TimeFromUnix(0), Value: 1},
+						},
+					},
+				},
+			},
+			want:        "keda-hpa-foo",
+			wantErrNone: true,
+		},
+		{
+			name: "empty vector returns empty string and no error",
+			response: &mockResponse{
+				Status: "success",
+				Data: struct {
+					Type   string   `json:"resultType"`
+					Result []Result `json:"result"`
+				}{
+					Type:   "vector",
+					Result: []Result{},
+				},
+			},
+			want:        "",
+			wantErrNone: true,
+		},
+		{
+			name:       "HTTP 500 wraps ErrHPADetectionFailed",
+			statusCode: http.StatusInternalServerError,
+			want:       "",
+			wantErrIs:  ErrHPADetectionFailed,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if tt.statusCode != 0 {
+					w.WriteHeader(tt.statusCode)
+					return
+				}
+				if err := json.NewEncoder(w).Encode(tt.response); err != nil {
+					t.Errorf("error encoding response: %v", err)
+					return
+				}
+			}))
+			defer svr.Close()
+
+			c, err := NewClient(&ClientConfig{Address: svr.URL})
+			if err != nil {
+				t.Fatalf("creating client: %v", err)
+			}
+
+			got, err := c.HPATargeting(context.Background(), "c", "ns", "Deployment", "foo")
+			if tt.wantErrNone {
+				if err != nil {
+					t.Fatalf("HPATargeting() unexpected error: %v", err)
+				}
+			} else if !errors.Is(err, tt.wantErrIs) {
+				t.Fatalf("HPATargeting() error = %v, want errors.Is %v", err, tt.wantErrIs)
+			}
+			if got != tt.want {
+				t.Errorf("HPATargeting() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestClient_GetObservedReplicas(t *testing.T) {
+	type Result struct {
+		Metric model.Metric     `json:"metric"`
+		Value  model.SamplePair `json:"value"`
+	}
+	type mockResponse struct {
+		Status string `json:"status"`
+		Data   struct {
+			Type   string   `json:"resultType"`
+			Result []Result `json:"result"`
+		} `json:"data"`
+	}
+
+	mkVector := func(v model.SampleValue) *mockResponse {
+		return &mockResponse{
+			Status: "success",
+			Data: struct {
+				Type   string   `json:"resultType"`
+				Result []Result `json:"result"`
+			}{
+				Type: "vector",
+				Result: []Result{
+					{
+						Metric: model.Metric{},
+						Value:  model.SamplePair{Timestamp: model.TimeFromUnix(0), Value: v},
+					},
+				},
+			},
+		}
+	}
+	emptyVector := &mockResponse{
+		Status: "success",
+		Data: struct {
+			Type   string   `json:"resultType"`
+			Result []Result `json:"result"`
+		}{Type: "vector", Result: []Result{}},
+	}
+
+	tests := []struct {
+		name        string
+		kind        string
+		response    *mockResponse
+		statusCode  int
+		want        float64
+		wantErrIs   error
+		wantErrNone bool
+	}{
+		{
+			name:        "Deployment hit returns observed avg",
+			kind:        "Deployment",
+			response:    mkVector(878.2),
+			want:        878.2,
+			wantErrNone: true,
+		},
+		{
+			name:        "StatefulSet hit returns observed avg",
+			kind:        "StatefulSet",
+			response:    mkVector(50.0),
+			want:        50.0,
+			wantErrNone: true,
+		},
+		{
+			name:      "empty vector returns ErrNoResults",
+			kind:      "Deployment",
+			response:  emptyVector,
+			want:      0,
+			wantErrIs: ErrNoResults,
+		},
+		{
+			name:      "unsupported kind returns error without querying",
+			kind:      "DaemonSet",
+			want:      0,
+			wantErrIs: ErrUnsupportedKind,
+		},
+		{
+			name:       "HTTP 500 returns ErrBadQuery",
+			kind:       "Deployment",
+			statusCode: http.StatusInternalServerError,
+			want:       0,
+			wantErrIs:  ErrBadQuery,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				if tt.statusCode != 0 {
+					w.WriteHeader(tt.statusCode)
+					return
+				}
+				if err := json.NewEncoder(w).Encode(tt.response); err != nil {
+					t.Errorf("error encoding response: %v", err)
+					return
+				}
+			}))
+			defer svr.Close()
+
+			c, err := NewClient(&ClientConfig{Address: svr.URL})
+			if err != nil {
+				t.Fatalf("creating client: %v", err)
+			}
+
+			got, err := c.GetObservedReplicas(context.Background(), "c", "ns", tt.kind, "foo")
+			if tt.wantErrNone {
+				if err != nil {
+					t.Fatalf("GetObservedReplicas() unexpected error: %v", err)
+				}
+			} else if !errors.Is(err, tt.wantErrIs) {
+				t.Fatalf("GetObservedReplicas() error = %v, want errors.Is %v", err, tt.wantErrIs)
+			}
+			if got != tt.want {
+				t.Errorf("GetObservedReplicas() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

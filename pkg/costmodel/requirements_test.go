@@ -34,63 +34,70 @@ func TestParseManifest(t *testing.T) {
 
 	tests := map[string]Requirements{
 		"Deployment": {
-			CPU:       cpu("500m"),
-			Memory:    mem("1000Mi"),
-			Kind:      "Deployment",
-			Namespace: "opencost",
-			Name:      "prom-label-proxy",
+			CPUPerPod:    cpu("500m"),
+			MemoryPerPod: mem("1000Mi"),
+			Replicas:     1,
+			Kind:         "Deployment",
+			Namespace:    "opencost",
+			Name:         "prom-label-proxy",
 		},
 		"Job": {
-			CPU:       cpu("50m"),
-			Memory:    mem("200Mi"),
-			Kind:      "Job",
-			Namespace: "hosted-grafana",
-			Name:      "hosted-grafana-source-ips-update-27973440",
+			CPUPerPod:    cpu("50m"),
+			MemoryPerPod: mem("200Mi"),
+			Replicas:     1,
+			Kind:         "Job",
+			Namespace:    "hosted-grafana",
+			Name:         "hosted-grafana-source-ips-update-27973440",
 		},
 
 		"StatefulSet": {
-			CPU:              cpu("1"),
-			Memory:           mem("4Gi"),
-			PersistentVolume: pv("32Gi"),
-			Kind:             "StatefulSet",
-			Namespace:        "opencost",
-			Name:             "opencost",
+			CPUPerPod:              cpu("1"),
+			MemoryPerPod:           mem("4Gi"),
+			PersistentVolumePerPod: pv("32Gi"),
+			Replicas:               1,
+			Kind:                   "StatefulSet",
+			Namespace:              "opencost",
+			Name:                   "opencost",
 		},
 
 		"DaemonSet": {
-			CPU:       cpu("50m"),
-			Memory:    mem("50Mi"),
-			Kind:      "DaemonSet",
-			Namespace: "conntrack-exporter",
-			Name:      "conntrack-exporter",
+			CPUPerPod:    cpu("50m"),
+			MemoryPerPod: mem("50Mi"),
+			Replicas:     1,
+			Kind:         "DaemonSet",
+			Namespace:    "conntrack-exporter",
+			Name:         "conntrack-exporter",
 		},
 
 		"Pod": {
-			CPU:       cpu("45"),
-			Memory:    mem("320Gi"),
-			Kind:      "Pod",
-			Namespace: "default",
-			Name:      "prometheus-0",
+			CPUPerPod:    cpu("45"),
+			MemoryPerPod: mem("320Gi"),
+			Replicas:     1,
+			Kind:         "Pod",
+			Namespace:    "default",
+			Name:         "prometheus-0",
 		},
 
 		// Multi-container manifests
 		"StatefulSet-with-2-containers": {
-			CPU:              cpu("1") + cpu("10m"),
-			Memory:           mem("4Gi") + mem("55M"),
-			PersistentVolume: pv("32Gi"),
-			Kind:             "StatefulSet",
-			Namespace:        "opencost",
-			Name:             "opencost",
+			CPUPerPod:              cpu("1") + cpu("10m"),
+			MemoryPerPod:           mem("4Gi") + mem("55M"),
+			PersistentVolumePerPod: pv("32Gi"),
+			Replicas:               1,
+			Kind:                   "StatefulSet",
+			Namespace:              "opencost",
+			Name:                   "opencost",
 		},
 
 		// With replicas
 		"StatefulSet-with-replicas": {
-			CPU:              2 * cpu("45"),
-			Memory:           2 * mem("320Gi"),
-			PersistentVolume: 2 * pv("7500Gi"),
-			Kind:             "StatefulSet",
-			Namespace:        "default",
-			Name:             "prometheus",
+			CPUPerPod:              cpu("45"),
+			MemoryPerPod:           mem("320Gi"),
+			PersistentVolumePerPod: pv("7500Gi"),
+			Replicas:               2,
+			Kind:                   "StatefulSet",
+			Namespace:              "default",
+			Name:                   "prometheus",
 		},
 	}
 
@@ -127,12 +134,13 @@ func TestParseManifest(t *testing.T) {
 		}
 
 		exp := Requirements{
-			CPU:              cpu("200m"),
-			Memory:           mem("1Gi"),
-			PersistentVolume: pv("100Gi"),
-			Kind:             "StatefulSet",
-			Namespace:        "alertmanager",
-			Name:             "alertmanager",
+			CPUPerPod:              cpu("200m"),
+			MemoryPerPod:           mem("1Gi"),
+			PersistentVolumePerPod: pv("100Gi"),
+			Replicas:               1,
+			Kind:                   "StatefulSet",
+			Namespace:              "alertmanager",
+			Name:                   "alertmanager",
 		}
 
 		if exp != got {
@@ -161,44 +169,44 @@ func TestDelta(t *testing.T) {
 	}{
 		"Two equal resources should result in all values being zero": {
 			from: Requirements{
-				CPU:    1,
-				Memory: 2,
+				CPUPerPod:    1,
+				MemoryPerPod: 2,
 			},
 			to: Requirements{
-				CPU:    1,
-				Memory: 2,
+				CPUPerPod:    1,
+				MemoryPerPod: 2,
 			},
 			want: Requirements{
-				CPU:    0,
-				Memory: 0,
+				CPUPerPod:    0,
+				MemoryPerPod: 0,
 			},
 		},
 		"Two resources with more resources should result in the correct positive delta": {
 			from: Requirements{
-				CPU:    1,
-				Memory: 2,
+				CPUPerPod:    1,
+				MemoryPerPod: 2,
 			},
 			to: Requirements{
-				CPU:    2,
-				Memory: 4,
+				CPUPerPod:    2,
+				MemoryPerPod: 4,
 			},
 			want: Requirements{
-				CPU:    1,
-				Memory: 2,
+				CPUPerPod:    1,
+				MemoryPerPod: 2,
 			},
 		},
 		"To resources with less resources should result in the correct negative delta": {
 			from: Requirements{
-				CPU:    2,
-				Memory: 4,
+				CPUPerPod:    2,
+				MemoryPerPod: 4,
 			},
 			to: Requirements{
-				CPU:    1,
-				Memory: 2,
+				CPUPerPod:    1,
+				MemoryPerPod: 2,
 			},
 			want: Requirements{
-				CPU:    -1,
-				Memory: -2,
+				CPUPerPod:    -1,
+				MemoryPerPod: -2,
 			},
 		},
 	}

@@ -1,6 +1,7 @@
 package costmodel
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +31,8 @@ type Reporter struct {
 	Writer     io.Writer
 	reports    []report
 	reportType ReportType
+	warnings   []string
+	errors     []string
 }
 
 // report is a model for a cost report.
@@ -49,6 +52,69 @@ func (r *Reporter) AddReport(costModel *CostModel, from, to Requirements) {
 		From:      from,
 		To:        to,
 	})
+}
+
+// AddWarning records a non-fatal message that will be surfaced in the markdown
+// report under the Warnings section. Use for expected events or known limitations
+// (e.g., observed-replicas substitution applied for an HPA-managed workload).
+func (r *Reporter) AddWarning(msg string) {
+	r.warnings = append(r.warnings, msg)
+}
+
+// AddReportWithResolvedReplicas adds a cost report after substituting the manifest
+// replica count with the observed 7d-average for HPA-managed Deployment/StatefulSet
+// workloads. For unsupported kinds (DaemonSet, Pod, Job, CronJob) or when the
+// CostModel cannot be used to identify a cluster, falls back to AddReport with the
+// manifest replica count.
+//
+// On substitution, an audit-trail Warning is added to the reporter so reviewers can
+// see that observed replicas were used. On resolver errors, the manifest count is
+// preserved and an Error is added so misleading numbers are flagged rather than
+// silently presented.
+func (r *Reporter) AddReportWithResolvedReplicas(
+	ctx context.Context,
+	resolver HPAResolver,
+	cm *CostModel,
+	from, to Requirements,
+) {
+	id := to
+	if id.Kind == "" {
+		id = from
+	}
+	if cm == nil || cm.Cluster == nil || (id.Kind != "Deployment" && id.Kind != "StatefulSet") {
+		r.AddReport(cm, from, to)
+		return
+	}
+
+	replicas, source, err := ResolveReplicas(ctx, resolver, cm.Cluster.Name, id.Namespace, id.Kind, id.Name, id.Replicas)
+	if err != nil {
+		r.AddError(fmt.Sprintf("resolving replicas for %s/%s/%s on %s: %v",
+			id.Namespace, id.Kind, id.Name, cm.Cluster.Name, err))
+		r.AddReport(cm, from, to)
+		return
+	}
+
+	if source == SourceObservedHPA {
+		manifestReplicas := id.Replicas
+		if from.Kind != "" {
+			from.Replicas = replicas
+		}
+		if to.Kind != "" {
+			to.Replicas = replicas
+		}
+		r.AddWarning(fmt.Sprintf(
+			"used observed %d replicas (manifest: %d) for %s/%s/%s on %s — workload is HPA-managed",
+			replicas, manifestReplicas, id.Namespace, id.Kind, id.Name, cm.Cluster.Name,
+		))
+	}
+
+	r.AddReport(cm, from, to)
+}
+
+// AddError records a message about an unexpected event that may have led to
+// inaccurate cost numbers. Surfaced under the Errors section in the markdown report.
+func (r *Reporter) AddError(msg string) {
+	r.errors = append(r.errors, msg)
 }
 
 func New(w io.Writer, reportType string) *Reporter {

@@ -127,8 +127,8 @@ func GetCostModelForCluster(ctx context.Context, client *Client, cluster string)
 
 // TotalCostForPeriod calculates the costs of each resource on the CostModel and returns the sum of the costs
 func (c *CostModel) TotalCostForPeriod(p Period, r Requirements) float64 {
-	cpuCost := c.CPU.NonSpotCPUForPeriod(p, r.CPU)
-	ramCost := c.RAM.NonSpotMemoryForPeriod(p, r.Memory)
-	pvCost := c.PersistentVolume.DollarsForPeriod(p, r.PersistentVolume)
+	cpuCost := c.CPU.NonSpotCPUForPeriod(p, r.TotalCPU())
+	ramCost := c.RAM.NonSpotMemoryForPeriod(p, r.TotalMemory())
+	pvCost := c.PersistentVolume.DollarsForPeriod(p, r.TotalPersistentVolume())
 	return cpuCost + ramCost + pvCost
 }

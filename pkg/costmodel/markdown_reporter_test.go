@@ -34,9 +34,10 @@ func TestResourcesCosts(t *testing.T) {
 	}
 
 	req := Requirements{
-		CPU:              h.cpu("100m"),
-		Memory:           h.mem("2Gi"),
-		PersistentVolume: h.pv("4Gi"),
+		CPUPerPod:              h.cpu("100m"),
+		MemoryPerPod:           h.mem("2Gi"),
+		PersistentVolumePerPod: h.pv("4Gi"),
+		Replicas:               1,
 	}
 
 	got := resourcesCosts(cm, req)
@@ -177,14 +178,16 @@ func TestTemplate(t *testing.T) {
 	}
 
 	req1 := Requirements{
-		CPU:              h.cpu("500m"),
-		Memory:           h.mem("2Gi"),
-		PersistentVolume: h.pv("4Gi"),
+		CPUPerPod:              h.cpu("500m"),
+		MemoryPerPod:           h.mem("2Gi"),
+		PersistentVolumePerPod: h.pv("4Gi"),
+		Replicas:               1,
 	}
 	req2 := Requirements{
-		CPU:              h.cpu("1"),
-		Memory:           h.mem("4Gi"),
-		PersistentVolume: h.pv("8Gi"),
+		CPUPerPod:              h.cpu("1"),
+		MemoryPerPod:           h.mem("4Gi"),
+		PersistentVolumePerPod: h.pv("8Gi"),
+		Replicas:               1,
 	}
 
 	tests := map[string]struct {

@@ -61,16 +61,26 @@ const (
 			sum(nodepool:node:sum{cluster="%s"})[30d:1d]
 		)
 	`
+
+	// queryHPATargeting filters kube_horizontalpodautoscaler_info by the workload it targets.
+	// The horizontalpodautoscaler label on a hit holds the HPA name (also used by KEDA-managed HPAs).
+	queryHPATargeting = `kube_horizontalpodautoscaler_info{cluster="%s", namespace="%s", scaletargetref_kind="%s", scaletargetref_name="%s"}`
+
+	// queryObservedReplicas reports the average actual replica count over a 7d window.
+	// Format args: metric, cluster, namespace, kindLabel, name.
+	queryObservedReplicas = `avg(avg_over_time(%s{cluster="%s", namespace="%s", %s="%s"}[7d]))`
 )
 
 // ErrNoResults is the error returned when querying for costs returns
 // no results.
 var (
-	ErrNoResults         = errors.New("no cost results")
-	ErrBadQuery          = errors.New("bad query")
-	ErrNilConfig         = errors.New("client config is nil")
-	ErrEmptyAddress      = errors.New("client address can't be empty")
-	ErrProdConfigMissing = errors.New("prod config is missing")
+	ErrNoResults          = errors.New("no cost results")
+	ErrBadQuery           = errors.New("bad query")
+	ErrNilConfig          = errors.New("client config is nil")
+	ErrEmptyAddress       = errors.New("client address can't be empty")
+	ErrProdConfigMissing  = errors.New("prod config is missing")
+	ErrHPADetectionFailed = errors.New("hpa detection failed")
+	ErrUnsupportedKind    = errors.New("unsupported workload kind")
 )
 
 // Client is a client for the cost model.
@@ -183,6 +193,70 @@ func (c *Client) GetNodeCount(ctx context.Context, cluster string) (int, error) 
 	return int(result[0].Value), nil
 }
 
+// GetObservedReplicas returns the 7-day average replica count for the given workload
+// from kube-state-metrics, regardless of who scales it (HPA, KEDA, manual). Used to
+// substitute manifest replicas with reality for HPA-managed workloads.
+// Returns ErrUnsupportedKind for kinds without a replica-count metric (DaemonSet, Pod, Job).
+// Returns ErrNoResults if the query succeeds but has no samples (e.g., brand-new workload
+// with no history) — callers should surface this rather than silently fall back.
+func (c *Client) GetObservedReplicas(ctx context.Context, cluster, namespace, kind, name string) (float64, error) {
+	metric, kindLabel, err := replicaMetricForKind(kind)
+	if err != nil {
+		return 0, err
+	}
+	query := fmt.Sprintf(queryObservedReplicas, metric, cluster, namespace, kindLabel, name)
+	results, err := c.query(ctx, query)
+	if err != nil {
+		return 0, ErrBadQuery
+	}
+	vec, ok := results.(model.Vector)
+	if !ok {
+		return 0, ErrBadQuery
+	}
+	if len(vec) == 0 {
+		return 0, ErrNoResults
+	}
+	return float64(vec[0].Value), nil
+}
+
+// replicaMetricForKind returns the kube-state-metrics metric name and the label
+// holding the workload name for a given Kubernetes kind.
+func replicaMetricForKind(kind string) (metric, label string, err error) {
+	switch kind {
+	case "Deployment":
+		return "kube_deployment_status_replicas", "deployment", nil
+	case "StatefulSet":
+		return "kube_statefulset_replicas", "statefulset", nil
+	default:
+		return "", "", fmt.Errorf("%w: %s", ErrUnsupportedKind, kind)
+	}
+}
+
+// HPATargeting returns the name of the HorizontalPodAutoscaler targeting the given
+// (cluster, namespace, kind, name) workload, or an empty string if no HPA targets it.
+// Works for vanilla HPAs and KEDA-managed HPAs (KEDA creates a regular HPA underneath).
+// Transport or unexpected response shape errors are wrapped with ErrHPADetectionFailed
+// so callers can distinguish "definitely not HPA-managed" from "we couldn't tell."
+func (c *Client) HPATargeting(ctx context.Context, cluster, namespace, kind, name string) (string, error) {
+	query := fmt.Sprintf(queryHPATargeting, cluster, namespace, kind, name)
+	results, err := c.query(ctx, query)
+	if err != nil {
+		return "", fmt.Errorf("%w: %v", ErrHPADetectionFailed, err)
+	}
+	vec, ok := results.(model.Vector)
+	if !ok {
+		return "", fmt.Errorf("%w: unexpected result type %T", ErrHPADetectionFailed, results)
+	}
+	if len(vec) == 0 {
+		return "", nil
+	}
+	hpa := string(vec[0].Metric["horizontalpodautoscaler"])
+	if hpa == "" {
+		return "", fmt.Errorf("%w: missing horizontalpodautoscaler label", ErrHPADetectionFailed)
+	}
+	return hpa, nil
+}
+
 // GetCostForPersistentVolume returns the average cost per persistent volume for a given cluster
 func (c *Client) GetCostForPersistentVolume(ctx context.Context, cluster string) (Cost, error) {
 	query := fmt.Sprintf(queryPersistentVolumeCost, cluster, cluster, cluster, cluster)
@@ -251,17 +325,28 @@ func (c *Clients) GetClusterCosts(ctx context.Context, cluster string) (*CostMod
 	defer func() {
 		slog.Info("GetClusterCosts", "cluster", cluster, "duration", time.Since(start))
 	}()
-	var cost *CostModel
-	var err error
-	// if dev client is present
-	client := c.Prod
-	if c.Dev != nil && strings.HasPrefix(cluster, "dev-") {
-		client = c.Dev
-	}
-	cost, err = GetCostModelForCluster(ctx, client, cluster)
+	cost, err := GetCostModelForCluster(ctx, c.clientFor(cluster), cluster)
 	if err != nil {
 		// TODO here we should probably return an error like below
 		return nil, fmt.Errorf("fetching cost model for cluster %s: %w", cluster, err)
 	}
 	return cost, nil
+}
+
+// clientFor picks the prod or dev client based on cluster name prefix.
+func (c *Clients) clientFor(cluster string) *Client {
+	if c.Dev != nil && strings.HasPrefix(cluster, "dev-") {
+		return c.Dev
+	}
+	return c.Prod
+}
+
+// HPATargeting routes to the appropriate prod/dev client based on cluster prefix.
+func (c *Clients) HPATargeting(ctx context.Context, cluster, namespace, kind, name string) (string, error) {
+	return c.clientFor(cluster).HPATargeting(ctx, cluster, namespace, kind, name)
+}
+
+// GetObservedReplicas routes to the appropriate prod/dev client based on cluster prefix.
+func (c *Clients) GetObservedReplicas(ctx context.Context, cluster, namespace, kind, name string) (float64, error) {
+	return c.clientFor(cluster).GetObservedReplicas(ctx, cluster, namespace, kind, name)
 }

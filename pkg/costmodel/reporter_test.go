@@ -2,6 +2,7 @@ package costmodel
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -30,15 +31,17 @@ func TestReporter_writeSummary(t *testing.T) {
 	}
 
 	fromRequirements := Requirements{
-		CPU:              1000,
-		Memory:           1024 * 1024 * 1024,
-		PersistentVolume: 1024 * 1024 * 1024,
+		CPUPerPod:              1000,
+		MemoryPerPod:           1024 * 1024 * 1024,
+		PersistentVolumePerPod: 1024 * 1024 * 1024,
+		Replicas:               1,
 	}
 
 	toRequirements := Requirements{
-		CPU:              2000,
-		Memory:           1024 * 1024 * 1024 * 2,
-		PersistentVolume: 1024 * 1024 * 1024 * 2,
+		CPUPerPod:              2000,
+		MemoryPerPod:           1024 * 1024 * 1024 * 2,
+		PersistentVolumePerPod: 1024 * 1024 * 1024 * 2,
+		Replicas:               1,
 	}
 
 	t.Run("Test a summary with an empty report", func(t *testing.T) {
@@ -182,43 +185,49 @@ func Test_calculateTotalCostForPeriod(t *testing.T) {
 		"no change should result in no cost": {
 			cm: cm,
 			from: Requirements{
-				CPU:              1,
-				Memory:           1,
-				PersistentVolume: 1,
+				CPUPerPod:              1,
+				MemoryPerPod:           1,
+				PersistentVolumePerPod: 1,
+				Replicas:               1,
 			},
 			to: Requirements{
-				CPU:              1,
-				Memory:           1,
-				PersistentVolume: 1,
+				CPUPerPod:              1,
+				MemoryPerPod:           1,
+				PersistentVolumePerPod: 1,
+				Replicas:               1,
 			},
 			changeMultiplier: 1,
 		},
 		"double in resources should result in a double in cost": {
 			cm: cm,
 			from: Requirements{
-				CPU:              1000,
-				Memory:           1024 * 1024 * 1024,
-				PersistentVolume: 1000,
+				CPUPerPod:              1000,
+				MemoryPerPod:           1024 * 1024 * 1024,
+				PersistentVolumePerPod: 1000,
+				Replicas:               1,
 			},
 
 			to: Requirements{
-				CPU:              2000,
-				Memory:           1024 * 1024 * 1024 * 2,
-				PersistentVolume: 2000,
+				CPUPerPod:              2000,
+				MemoryPerPod:           1024 * 1024 * 1024 * 2,
+				PersistentVolumePerPod: 2000,
+				Replicas:               1,
 			},
 			changeMultiplier: 2,
 		},
 		"halving in resources should result in a halving in cost": {
 			cm: cm,
 			from: Requirements{
-				CPU:              1000,
-				Memory:           1024 * 1024 * 1024,
-				PersistentVolume: 1000,
+				CPUPerPod:              1000,
+				MemoryPerPod:           1024 * 1024 * 1024,
+				PersistentVolumePerPod: 1000,
+				Replicas:               1,
 			},
 			to: Requirements{
-				CPU:              500,
-				Memory:           1024 * 1024 * 1024 / 2,
-				PersistentVolume: 500,
+				CPUPerPod:              500,
+				MemoryPerPod:           1024 * 1024 * 1024 / 2,
+				PersistentVolumePerPod: 500,
+				Replicas:               1,
 			},
 			changeMultiplier: 0.5,
 		},
@@ -247,4 +256,176 @@ func TestReporter_Write(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestReporter_AddWarning_AppearsInMarkdown(t *testing.T) {
+	cm := &CostModel{
+		Cluster:          &Cluster{Name: "test"},
+		CPU:              Cost{NonSpot: 1},
+		RAM:              Cost{NonSpot: 1},
+		PersistentVolume: Cost{NonSpot: 1},
+	}
+	req := Requirements{
+		CPUPerPod:    100,
+		MemoryPerPod: 1024 * 1024 * 1024,
+		Replicas:     1,
+		Kind:         "Deployment",
+		Namespace:    "ns",
+		Name:         "wk",
+	}
+
+	const msg = "HPA detection failed for ns/Deployment/wk: boom"
+	var s strings.Builder
+	r := New(&s, string(Markdown))
+	r.AddReport(cm, req, req)
+	r.AddWarning(msg)
+	if err := r.Write(); err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+
+	got := s.String()
+	if !strings.Contains(got, ":warning: Warnings") {
+		t.Errorf("expected :warning: section in output, got:\n%s", got)
+	}
+	if !strings.Contains(got, msg) {
+		t.Errorf("expected warning message %q in output, got:\n%s", msg, got)
+	}
+}
+
+func TestReporter_AddReportWithResolvedReplicas(t *testing.T) {
+	ctx := context.Background()
+	cm := &CostModel{
+		Cluster:          &Cluster{Name: "pop-prod-aws-northcalifornia-0"},
+		CPU:              Cost{NonSpot: 0.0258},
+		RAM:              Cost{NonSpot: 0.0029},
+		PersistentVolume: Cost{Dollars: 0},
+	}
+	from := Requirements{
+		CPUPerPod:    100, // 100 millicores
+		MemoryPerPod: 1024 * 1024 * 1024,
+		Replicas:     1,
+		Kind:         "Deployment",
+		Namespace:    "sm-k6-mq",
+		Name:         "sm-k6-mq-runner-browser",
+	}
+	to := from
+	to.CPUPerPod = 2000 // simulate the PR-566058 jump
+
+	t.Run("HPA-managed Deployment substitutes observed and warns", func(t *testing.T) {
+		fr := &fakeResolver{hpaName: "keda-hpa-sm-k6-mq-runner-browser", observed: 878}
+		var s strings.Builder
+		r := New(&s, string(Markdown))
+		r.AddReportWithResolvedReplicas(ctx, fr, cm, from, to)
+		if err := r.Write(); err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		got := s.String()
+
+		if !strings.Contains(got, ":warning:") {
+			t.Errorf("expected :warning: section, got:\n%s", got)
+		}
+		if !strings.Contains(got, "observed 878 replicas") {
+			t.Errorf("expected substitution warning mentioning 878, got:\n%s", got)
+		}
+		if !strings.Contains(got, "manifest: 1") {
+			t.Errorf("expected warning to mention manifest replicas, got:\n%s", got)
+		}
+		if !strings.Contains(got, "sm-k6-mq-runner-browser") {
+			t.Errorf("expected warning to mention workload name, got:\n%s", got)
+		}
+		// to.CPUPerPod=2000m × 878 replicas = 1756 cores × $0.0258/core/hour × 730h ≈ $33072
+		// Manifest-only path would have produced ~$37/month.
+		if !strings.Contains(got, "$33") && !strings.Contains(got, "$32") {
+			t.Errorf("expected scaled-up cost ($32k–$33k range) in report, got:\n%s", got)
+		}
+	})
+
+	t.Run("non-HPA Deployment uses manifest replicas and emits no warning", func(t *testing.T) {
+		fr := &fakeResolver{hpaName: ""}
+		var s strings.Builder
+		r := New(&s, string(Markdown))
+		r.AddReportWithResolvedReplicas(ctx, fr, cm, from, to)
+		if err := r.Write(); err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		got := s.String()
+		if strings.Contains(got, ":warning:") {
+			t.Errorf("did not expect warning section, got:\n%s", got)
+		}
+		if fr.observedCalls != 0 {
+			t.Errorf("observed should not be queried when no HPA, got %d", fr.observedCalls)
+		}
+	})
+
+	t.Run("unsupported kind falls back to manifest path", func(t *testing.T) {
+		fr := &fakeResolver{}
+		var s strings.Builder
+		r := New(&s, string(Markdown))
+		dsFrom := from
+		dsFrom.Kind = "DaemonSet"
+		dsTo := to
+		dsTo.Kind = "DaemonSet"
+		r.AddReportWithResolvedReplicas(ctx, fr, cm, dsFrom, dsTo)
+		if err := r.Write(); err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		got := s.String()
+		if strings.Contains(got, ":warning:") {
+			t.Errorf("did not expect warning section for DaemonSet, got:\n%s", got)
+		}
+		if fr.hpaCalls != 0 {
+			t.Errorf("HPATargeting should not be called for DaemonSet, got %d", fr.hpaCalls)
+		}
+	})
+
+	t.Run("HPA detected but observed empty surfaces error and keeps manifest replicas", func(t *testing.T) {
+		fr := &fakeResolver{hpaName: "keda-hpa-foo", observedErr: ErrNoResults}
+		var s strings.Builder
+		r := New(&s, string(Markdown))
+		r.AddReportWithResolvedReplicas(ctx, fr, cm, from, to)
+		if err := r.Write(); err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		got := s.String()
+		if !strings.Contains(got, ":exclamation:") {
+			t.Errorf("expected :exclamation: section on resolver error, got:\n%s", got)
+		}
+		if !strings.Contains(got, "sm-k6-mq-runner-browser") {
+			t.Errorf("expected error to mention workload, got:\n%s", got)
+		}
+	})
+}
+
+func TestReporter_AddError_AppearsInMarkdown(t *testing.T) {
+	cm := &CostModel{
+		Cluster:          &Cluster{Name: "test"},
+		CPU:              Cost{NonSpot: 1},
+		RAM:              Cost{NonSpot: 1},
+		PersistentVolume: Cost{NonSpot: 1},
+	}
+	req := Requirements{
+		CPUPerPod:    100,
+		MemoryPerPod: 1024 * 1024 * 1024,
+		Replicas:     1,
+		Kind:         "Deployment",
+		Namespace:    "ns",
+		Name:         "wk",
+	}
+
+	const msg = "Mimir replicas query failed for ns/Deployment/wk: timeout"
+	var s strings.Builder
+	r := New(&s, string(Markdown))
+	r.AddReport(cm, req, req)
+	r.AddError(msg)
+	if err := r.Write(); err != nil {
+		t.Fatalf("unexpected: %v", err)
+	}
+
+	got := s.String()
+	if !strings.Contains(got, ":exclamation: Errors") {
+		t.Errorf("expected :exclamation: section in output, got:\n%s", got)
+	}
+	if !strings.Contains(got, msg) {
+		t.Errorf("expected error message %q in output, got:\n%s", msg, got)
+	}
 }
