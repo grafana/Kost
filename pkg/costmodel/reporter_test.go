@@ -30,15 +30,17 @@ func TestReporter_writeSummary(t *testing.T) {
 	}
 
 	fromRequirements := Requirements{
-		CPU:              1000,
-		Memory:           1024 * 1024 * 1024,
-		PersistentVolume: 1024 * 1024 * 1024,
+		CPUPerPod:              1000,
+		MemoryPerPod:           1024 * 1024 * 1024,
+		PersistentVolumePerPod: 1024 * 1024 * 1024,
+		Replicas:               1,
 	}
 
 	toRequirements := Requirements{
-		CPU:              2000,
-		Memory:           1024 * 1024 * 1024 * 2,
-		PersistentVolume: 1024 * 1024 * 1024 * 2,
+		CPUPerPod:              2000,
+		MemoryPerPod:           1024 * 1024 * 1024 * 2,
+		PersistentVolumePerPod: 1024 * 1024 * 1024 * 2,
+		Replicas:               1,
 	}
 
 	t.Run("Test a summary with an empty report", func(t *testing.T) {
@@ -182,43 +184,49 @@ func Test_calculateTotalCostForPeriod(t *testing.T) {
 		"no change should result in no cost": {
 			cm: cm,
 			from: Requirements{
-				CPU:              1,
-				Memory:           1,
-				PersistentVolume: 1,
+				CPUPerPod:              1,
+				MemoryPerPod:           1,
+				PersistentVolumePerPod: 1,
+				Replicas:               1,
 			},
 			to: Requirements{
-				CPU:              1,
-				Memory:           1,
-				PersistentVolume: 1,
+				CPUPerPod:              1,
+				MemoryPerPod:           1,
+				PersistentVolumePerPod: 1,
+				Replicas:               1,
 			},
 			changeMultiplier: 1,
 		},
 		"double in resources should result in a double in cost": {
 			cm: cm,
 			from: Requirements{
-				CPU:              1000,
-				Memory:           1024 * 1024 * 1024,
-				PersistentVolume: 1000,
+				CPUPerPod:              1000,
+				MemoryPerPod:           1024 * 1024 * 1024,
+				PersistentVolumePerPod: 1000,
+				Replicas:               1,
 			},
 
 			to: Requirements{
-				CPU:              2000,
-				Memory:           1024 * 1024 * 1024 * 2,
-				PersistentVolume: 2000,
+				CPUPerPod:              2000,
+				MemoryPerPod:           1024 * 1024 * 1024 * 2,
+				PersistentVolumePerPod: 2000,
+				Replicas:               1,
 			},
 			changeMultiplier: 2,
 		},
 		"halving in resources should result in a halving in cost": {
 			cm: cm,
 			from: Requirements{
-				CPU:              1000,
-				Memory:           1024 * 1024 * 1024,
-				PersistentVolume: 1000,
+				CPUPerPod:              1000,
+				MemoryPerPod:           1024 * 1024 * 1024,
+				PersistentVolumePerPod: 1000,
+				Replicas:               1,
 			},
 			to: Requirements{
-				CPU:              500,
-				Memory:           1024 * 1024 * 1024 / 2,
-				PersistentVolume: 500,
+				CPUPerPod:              500,
+				MemoryPerPod:           1024 * 1024 * 1024 / 2,
+				PersistentVolumePerPod: 500,
+				Replicas:               1,
 			},
 			changeMultiplier: 0.5,
 		},

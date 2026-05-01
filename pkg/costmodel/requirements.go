@@ -16,22 +16,40 @@ import (
 // the manifest is unknown to the parser.
 var ErrUnknownKind = errors.New("unknown kind")
 
-// Requirements is a struct that holds the aggergated amount of resources for a given manifest file.
-// CPU and Memory are in millicores and bytes respectively and are the sum of all containers in a pod.
-// TODO: Calculate the amount of persistent volume required for a given manifest. This will require finding the associated PVC and calculating the size of the volume.
+// Requirements holds the per-pod resource requirements parsed from a manifest,
+// plus the replica count needed to compute aggregate cost.
+// CPUPerPod is in millicores; MemoryPerPod and PersistentVolumePerPod are in bytes.
+// Each PerPod field is the sum across all containers (or PVC templates) in a single pod.
+// Use TotalCPU / TotalMemory / TotalPersistentVolume to get aggregate values across replicas.
 type Requirements struct {
-	CPU              int64
-	Memory           int64
-	PersistentVolume int64
-	Kind             string
-	Namespace        string
-	Name             string
+	CPUPerPod              int64
+	MemoryPerPod           int64
+	PersistentVolumePerPod int64
+	Replicas               int
+	Kind                   string
+	Namespace              string
+	Name                   string
 }
 
-// AddRequirements will increment the resources by the amount specified in the given requirements.
+// AddRequirements increments the per-pod resources by the amount specified.
 func (r *Requirements) AddRequirements(reqs corev1.ResourceRequirements) {
-	r.CPU += reqs.Requests.Cpu().MilliValue()
-	r.Memory += reqs.Requests.Memory().Value()
+	r.CPUPerPod += reqs.Requests.Cpu().MilliValue()
+	r.MemoryPerPod += reqs.Requests.Memory().Value()
+}
+
+// TotalCPU returns aggregate CPU (millicores) across all replicas.
+func (r Requirements) TotalCPU() int64 {
+	return r.CPUPerPod * int64(r.Replicas)
+}
+
+// TotalMemory returns aggregate memory (bytes) across all replicas.
+func (r Requirements) TotalMemory() int64 {
+	return r.MemoryPerPod * int64(r.Replicas)
+}
+
+// TotalPersistentVolume returns aggregate persistent volume (bytes) across all replicas.
+func (r Requirements) TotalPersistentVolume() int64 {
+	return r.PersistentVolumePerPod * int64(r.Replicas)
 }
 
 // ParseManifest will parse a manifest file and return the aggregated amount of resources requested.
@@ -58,7 +76,7 @@ func ParseManifest(src []byte, costModel *CostModel) (Requirements, error) {
 		if x.Spec.Replicas != nil {
 			replicas = int(*x.Spec.Replicas)
 		}
-		addPersistentVolumeClaimRequirements(x.Spec.VolumeClaimTemplates, &r, replicas)
+		addPersistentVolumeClaimRequirements(x.Spec.VolumeClaimTemplates, &r)
 
 	case *appsv1.Deployment:
 		containers = x.Spec.Template.Spec.Containers
@@ -90,7 +108,8 @@ func ParseManifest(src []byte, costModel *CostModel) (Requirements, error) {
 	}
 
 	r.Kind = kind.Kind
-	addContainersRequirements(containers, &r, replicas)
+	r.Replicas = replicas
+	addContainersRequirements(containers, &r)
 	err = addMetadataToRequirements(obj, &r)
 	if err != nil {
 		return r, err
@@ -108,30 +127,30 @@ func addMetadataToRequirements(obj runtime.Object, requirements *Requirements) e
 	return nil
 }
 
-// addPersistentVolumeClaimRequirements will add the resources requested by the given persistent volume claims to the given requirements.
-func addPersistentVolumeClaimRequirements(templates []corev1.PersistentVolumeClaim, r *Requirements, replicas int) {
+// addPersistentVolumeClaimRequirements adds per-pod PVC storage to the given requirements.
+func addPersistentVolumeClaimRequirements(templates []corev1.PersistentVolumeClaim, r *Requirements) {
 	for _, template := range templates {
-		r.PersistentVolume += int64(replicas) * template.Spec.Resources.Requests.Storage().Value()
+		r.PersistentVolumePerPod += template.Spec.Resources.Requests.Storage().Value()
 	}
 }
 
-// addContainersRequirements will add the resources requested by the given containers to the given requirements.
-// If the number of replicas is greater than 1, the resources will be multiplied by the number of replicas.
-func addContainersRequirements(containers []corev1.Container, r *Requirements, replicas int) {
+// addContainersRequirements adds per-pod container CPU and memory to the given requirements.
+func addContainersRequirements(containers []corev1.Container, r *Requirements) {
 	for _, container := range containers {
 		resources := container.Resources
-		r.CPU += resources.Requests.Cpu().MilliValue() * int64(replicas)
-		r.Memory += resources.Requests.Memory().Value() * int64(replicas)
+		r.CPUPerPod += resources.Requests.Cpu().MilliValue()
+		r.MemoryPerPod += resources.Requests.Memory().Value()
 	}
 }
 
-// Delta returns the difference between two resources.
+// Delta returns the field-wise difference between two resources.
 // A positive value signals that the resource has increased.
 // A negative value signals that the resource has decreased.
 func Delta(from, to Requirements) Requirements {
 	return Requirements{
-		CPU:              to.CPU - from.CPU,
-		Memory:           to.Memory - from.Memory,
-		PersistentVolume: to.PersistentVolume - from.PersistentVolume,
+		CPUPerPod:              to.CPUPerPod - from.CPUPerPod,
+		MemoryPerPod:           to.MemoryPerPod - from.MemoryPerPod,
+		PersistentVolumePerPod: to.PersistentVolumePerPod - from.PersistentVolumePerPod,
+		Replicas:               to.Replicas - from.Replicas,
 	}
 }
