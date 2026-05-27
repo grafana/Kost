@@ -1,8 +1,6 @@
 module github.com/grafana/kost
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.24.2
 
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.17.0
