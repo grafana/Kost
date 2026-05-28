@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/prometheus/common/model"
@@ -153,25 +154,15 @@ func TestNewClientAuthMethods(t *testing.T) {
 	})
 
 	t.Run("basic auth with http config file", func(t *testing.T) {
-		tmpCfg, err := os.CreateTemp("", "http_config.yaml")
-		if err != nil {
-			t.Errorf("error creating temp file: %v", err)
-			return
-		}
-		t.Cleanup(func() {
-			if err := os.Remove(tmpCfg.Name()); err != nil {
-				t.Errorf("failed to remove temp file: %v", err)
-			}
-		})
+		tmpPath := filepath.Join(t.TempDir(), "http_config.yaml")
 		content := fmt.Sprintf("basic_auth:\n  username: %s\n  password: %s", "testing", "12345")
-		_, err = tmpCfg.WriteString(content)
-		if err != nil {
-			t.Errorf("error writing to temp file: %v", err)
+		if err := os.WriteFile(tmpPath, []byte(content), 0o644); err != nil {
+			t.Errorf("error writing temp file: %v", err)
 			return
 		}
 		cfg := &ClientConfig{
 			Address:        "http://localhost:9090",
-			HTTPConfigFile: tmpCfg.Name(),
+			HTTPConfigFile: tmpPath,
 		}
 		client, err := NewClient(cfg)
 		if err != nil {
