@@ -167,13 +167,17 @@ func (r *Reporter) writeSummary() error {
 		fmt.Sprintf("PR changed the overall cost by %s(%.1f%%).", displayCostInDollars(totalDiff), percentageChange(fromTotalCost, toTotalCost)),
 		fmt.Sprintf("Total Monthly Cost went from $%.2f to $%.2f.", fromTotalCost, toTotalCost),
 	)
-	fmt.Fprintln(r.Writer, strings.Join(rows, "\n"))
+	if _, err := fmt.Fprintln(r.Writer, strings.Join(rows, "\n")); err != nil {
+		return err
+	}
 	return tabwriter.Flush()
 }
 
 func (r *Reporter) writeTable() error {
 	tabWriter := tabwriter.NewWriter(r.Writer, 8, 6, 2, ' ', 0)
-	fmt.Fprintln(tabWriter, strings.Join(headers, "\t"))
+	if _, err := fmt.Fprintln(tabWriter, strings.Join(headers, "\t")); err != nil {
+		return err
+	}
 	totalCosts := make(map[string]float64)
 
 	for _, m := range r.reports {
@@ -193,7 +197,9 @@ func (r *Reporter) writeTable() error {
 			totalCosts[keys.To] += toCost
 		}
 
-		fmt.Fprintln(tabWriter, strings.Join(row, "\t"))
+		if _, err := fmt.Fprintln(tabWriter, strings.Join(row, "\t")); err != nil {
+			return err
+		}
 	}
 
 	// If there are multiple models, print a Total Costs row.
@@ -209,7 +215,9 @@ func (r *Reporter) writeTable() error {
 			)
 		}
 
-		fmt.Fprintln(tabWriter, strings.Join(row, "\t"))
+		if _, err := fmt.Fprintln(tabWriter, strings.Join(row, "\t")); err != nil {
+			return err
+		}
 	}
 
 	return tabWriter.Flush()

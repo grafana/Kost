@@ -158,7 +158,11 @@ func TestNewClientAuthMethods(t *testing.T) {
 			t.Errorf("error creating temp file: %v", err)
 			return
 		}
-		defer os.Remove(tmpCfg.Name())
+		t.Cleanup(func() {
+			if err := os.Remove(tmpCfg.Name()); err != nil {
+				t.Errorf("failed to remove temp file: %v", err)
+			}
+		})
 		content := fmt.Sprintf("basic_auth:\n  username: %s\n  password: %s", "testing", "12345")
 		_, err = tmpCfg.WriteString(content)
 		if err != nil {
