@@ -11,8 +11,8 @@ require (
 	github.com/prometheus/common v0.66.1
 	github.com/shurcooL/githubv4 v0.0.0-20260209031235-2402fdf4a9ed
 	golang.org/x/oauth2 v0.31.0
-	k8s.io/api v0.34.1
-	k8s.io/apimachinery v0.34.1
+	k8s.io/api v0.34.2
+	k8s.io/apimachinery v0.34.2
 	k8s.io/client-go v0.34.1
 )
 
