@@ -1,14 +1,17 @@
 # Build Go Binary
-FROM golang:1.25.1 AS build
+FROM --platform=$BUILDPLATFORM golang:1.25.10 AS build
+
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /app
 COPY ["go.mod", "go.sum", "./"]
 RUN go mod download
 
 COPY . .
-RUN make build-binary
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make build-binary
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN apt-get -qqy update && \
     apt-get -qqy install git-core && \
