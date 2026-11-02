@@ -13,7 +13,6 @@ permissions:
   id-token: write
 
 env:
-  REGISTRY_IMAGE: grafana/kost
   # Docker image tags. See https://github.com/docker/metadata-action for format
   TAGS_CONFIG: |
     type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
@@ -30,9 +29,12 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Build and push
-        uses: grafana/shared-workflows/actions/build-push-to-dockerhub@bdcde6472886b2d8aec65bf238084f1b930532fd
+        uses: grafana/shared-workflows/actions/docker-build-push-image@b1ec01ab2a1a6ba0b0dc6643ccefc498a98a3654
         with:
-          repository: ${{ env.REGISTRY_IMAGE }}
+          registries: gar
+          gar-environment: prod
+          gar-repository: dockerhub-kost-prod-mirror
+          gar-image: kost
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
