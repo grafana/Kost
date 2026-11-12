@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: example-app
+  namespace: test
+spec:
+  replicas: 3
+  serviceName: example-app
+  selector:
+    matchLabels:
+      app: example-app
+  template:
+    metadata:
+      labels:
+        app: example-app
+    spec:
+      containers:
+        - name: app
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+      initContainers:
+        - name: first-sidecar
+          image: registry.k8s.io/pause:3.9
+          restartPolicy: Always
+          resources:
+            requests:
+              cpu: "1"
+              memory: 2Gi
+        - name: startup
+          image: registry.k8s.io/pause:3.9
+          args: ["-v"]
+          resources:
+            requests:
+              cpu: "8"
+              memory: 1Gi
+        - name: second-sidecar
+          image: registry.k8s.io/pause:3.9
+          restartPolicy: Always
+          resources:
+            requests:
+              cpu: "2"
+              memory: 3Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 32Gi
