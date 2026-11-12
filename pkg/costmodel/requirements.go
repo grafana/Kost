@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
+	resourcehelper "k8s.io/component-helpers/resource"
 )
 
 // ErrUnknownKind is the error throw when the kind of the resource in
@@ -19,7 +20,8 @@ var ErrUnknownKind = errors.New("unknown kind")
 // Requirements holds the per-pod resource requirements parsed from a manifest,
 // plus the replica count needed to compute aggregate cost.
 // CPUPerPod is in millicores; MemoryPerPod and PersistentVolumePerPod are in bytes.
-// Each PerPod field is the sum across all containers (or PVC templates) in a single pod.
+// CPU and memory are effective scheduling requests, including init containers and Pod overhead.
+// PersistentVolumePerPod is the sum across PVC templates in a single pod.
 // Use TotalCPU / TotalMemory / TotalPersistentVolume to get aggregate values across replicas.
 type Requirements struct {
 	CPUPerPod              int64
@@ -66,26 +68,26 @@ func ParseManifest(src []byte, costModel *CostModel) (Requirements, error) {
 	}
 
 	var (
-		containers []corev1.Container
-		replicas   = 1
+		podSpec  *corev1.PodSpec
+		replicas = 1
 	)
 
 	switch x := obj.(type) {
 	case *appsv1.StatefulSet:
-		containers = x.Spec.Template.Spec.Containers
+		podSpec = &x.Spec.Template.Spec
 		if x.Spec.Replicas != nil {
 			replicas = int(*x.Spec.Replicas)
 		}
 		addPersistentVolumeClaimRequirements(x.Spec.VolumeClaimTemplates, &r)
 
 	case *appsv1.Deployment:
-		containers = x.Spec.Template.Spec.Containers
+		podSpec = &x.Spec.Template.Spec
 		if x.Spec.Replicas != nil {
 			replicas = int(*x.Spec.Replicas)
 		}
 
 	case *appsv1.DaemonSet:
-		containers = x.Spec.Template.Spec.Containers
+		podSpec = &x.Spec.Template.Spec
 		// DaemonSets don't have a replica count, so we need to use the number of nodes in the cluster.
 		if costModel == nil {
 			return r, fmt.Errorf("%w: daemonsets require a cost model", ErrUnknownKind)
@@ -95,13 +97,13 @@ func ParseManifest(src []byte, costModel *CostModel) (Requirements, error) {
 		}
 
 	case *batchv1.Job:
-		containers = x.Spec.Template.Spec.Containers
+		podSpec = &x.Spec.Template.Spec
 
 	case *batchv1.CronJob:
-		containers = x.Spec.JobTemplate.Spec.Template.Spec.Containers
+		podSpec = &x.Spec.JobTemplate.Spec.Template.Spec
 
 	case *corev1.Pod:
-		containers = x.Spec.Containers
+		podSpec = &x.Spec
 
 	default:
 		return r, fmt.Errorf("%w: %v (%T)", ErrUnknownKind, kind, x)
@@ -109,7 +111,7 @@ func ParseManifest(src []byte, costModel *CostModel) (Requirements, error) {
 
 	r.Kind = kind.Kind
 	r.Replicas = replicas
-	addContainersRequirements(containers, &r)
+	addPodRequirements(podSpec, &r)
 	err = addMetadataToRequirements(obj, &r)
 	if err != nil {
 		return r, err
@@ -134,13 +136,45 @@ func addPersistentVolumeClaimRequirements(templates []corev1.PersistentVolumeCla
 	}
 }
 
-// addContainersRequirements adds per-pod container CPU and memory to the given requirements.
-func addContainersRequirements(containers []corev1.Container, r *Requirements) {
-	for _, container := range containers {
-		resources := container.Resources
-		r.CPUPerPod += resources.Requests.Cpu().MilliValue()
-		r.MemoryPerPod += resources.Requests.Memory().Value()
+// addPodRequirements adds effective per-pod CPU and memory requests.
+func addPodRequirements(spec *corev1.PodSpec, r *Requirements) {
+	// Manifest decoding skips API-server defaulting: missing requests inherit limits when the Pod is created.
+	for _, containers := range [][]corev1.Container{spec.Containers, spec.InitContainers} {
+		for i := range containers {
+			resources := &containers[i].Resources
+			for name, limit := range resources.Limits {
+				if _, exists := resources.Requests[name]; !exists {
+					if resources.Requests == nil {
+						resources.Requests = corev1.ResourceList{}
+					}
+					resources.Requests[name] = limit.DeepCopy()
+				}
+			}
+		}
 	}
+	pod := &corev1.Pod{Spec: *spec}
+	if spec.Resources != nil && len(spec.Resources.Limits) > 0 {
+		// Match Kubernetes Pod defaulting: container requests take precedence over Pod limits.
+		containerRequests := resourcehelper.AggregateContainerRequests(pod, resourcehelper.PodResourcesOptions{})
+		for _, name := range []corev1.ResourceName{corev1.ResourceCPU, corev1.ResourceMemory} {
+			if _, exists := spec.Resources.Requests[name]; exists {
+				continue
+			}
+			request, exists := containerRequests[name]
+			if !exists {
+				request, exists = spec.Resources.Limits[name]
+			}
+			if exists {
+				if spec.Resources.Requests == nil {
+					spec.Resources.Requests = corev1.ResourceList{}
+				}
+				spec.Resources.Requests[name] = request.DeepCopy()
+			}
+		}
+	}
+	requests := resourcehelper.PodRequests(pod, resourcehelper.PodResourcesOptions{})
+	r.CPUPerPod += requests.Cpu().MilliValue()
+	r.MemoryPerPod += requests.Memory().Value()
 }
 
 // Delta returns the field-wise difference between two resources.
